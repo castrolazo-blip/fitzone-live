@@ -266,9 +266,15 @@ input[type="date"]{-webkit-appearance:none;appearance:none;min-height:46px}
       <label>Tu nombre<input id="userName" type="text" autocomplete="given-name" placeholder="¿Cómo te llamo?"></label>
       <div class="grid2">
         <label>Edad<input id="age" type="number" inputmode="numeric" min="14" max="90" value="45"></label>
-        <label>Peso (kg)<input id="weight" type="number" inputmode="decimal" min="35" max="250" placeholder="opcional"></label>
+        <label><span id="weightLbl">Peso (lb)</span><input id="weight" type="text" inputmode="decimal" placeholder="opcional"></label>
+        <label>Estatura (m)<input id="height" type="text" inputmode="decimal" placeholder="Ej.: 1,72"></label>
         <label>FC en reposo<input id="rest" type="number" inputmode="numeric" min="35" max="110" placeholder="opcional"></label>
         <label>Sexo (calorías)<select id="sex"><option value="">Prefiero no decir</option><option value="m">Hombre</option><option value="f">Mujer</option></select></label>
+      </div>
+      <div class="lbl">Unidad de peso</div>
+      <div class="opts" style="grid-template-columns:repeat(2,minmax(0,1fr))" role="group" aria-label="Unidad de peso">
+        <button class="opt" data-unit="lb"><b>Libras (lb)</b></button>
+        <button class="opt" data-unit="kg"><b>Kilos (kg)</b></button>
       </div>
       <label class="check"><input id="prudent" type="checkbox"><span>Tengo una condición de salud, tomo medicamentos para el corazón o la presión, o algún médico me indicó cuidado con el ejercicio <span class="sub" style="font-weight:400">(modo prudente)</span></span></label>
       <label id="limitWrap" class="hidden">Límite máximo indicado por tu médico (lpm)<input id="medLimit" type="number" inputmode="numeric" min="80" max="200" placeholder="opcional"></label>
@@ -304,8 +310,9 @@ input[type="date"]{-webkit-appearance:none;appearance:none;min-height:46px}
   <section id="body" class="wrap hidden" style="padding:0">
     <div class="topbar"><button class="backbtn" data-go="home" aria-label="Volver al inicio">‹</button><h2>Mi cuerpo</h2></div>
     <div class="grid3" id="bodyStats"></div>
-    <div class="card"><div class="lbl">Peso (kg)</div><svg id="chW" viewBox="0 0 320 140" style="width:100%;height:auto" role="img" aria-label="Evolución del peso"></svg></div>
-    <div class="card"><div class="lbl">Masa muscular (kg)</div><svg id="chM" viewBox="0 0 320 140" style="width:100%;height:auto" role="img" aria-label="Evolución de la masa muscular"></svg></div>
+    <div class="card"><div class="lbl">Edad metabólica</div><div id="bodyMeta"></div></div>
+    <div class="card"><div class="lbl" id="lblChW">Peso</div><svg id="chW" viewBox="0 0 320 140" style="width:100%;height:auto" role="img" aria-label="Evolución del peso"></svg></div>
+    <div class="card"><div class="lbl" id="lblChM">Masa muscular</div><svg id="chM" viewBox="0 0 320 140" style="width:100%;height:auto" role="img" aria-label="Evolución de la masa muscular"></svg></div>
     <div class="card"><div class="lbl">Grasa corporal (%)</div><svg id="chF" viewBox="0 0 320 140" style="width:100%;height:auto" role="img" aria-label="Evolución de la grasa corporal"></svg></div>
     <button class="btn" id="btnBodyToday2" style="height:58px">+ Registrar hoy</button>
     <div class="card"><div class="lbl">Registros</div><div id="bodyList" class="small"></div></div>
@@ -462,8 +469,8 @@ input[type="date"]{-webkit-appearance:none;appearance:none;min-height:46px}
     <button class="opt" data-bdate="other"><b>Otra fecha</b><span>elegir día</span></button>
   </div>
   <label id="bDateWrap" class="hidden">Fecha<input id="bDate" type="date"></label>
-  <label>Peso (kg)<input id="bW" type="text" inputmode="decimal" placeholder="Ej.: 86,4" style="height:58px;font-size:22px;font-weight:700"></label>
-  <label>Masa muscular (kg)<input id="bM" type="text" inputmode="decimal" placeholder="Ej.: 32,5 (opcional)" style="height:58px;font-size:22px;font-weight:700"></label>
+  <label><span id="bWLbl">Peso (lb)</span><input id="bW" type="text" inputmode="decimal" placeholder="Ej.: 86,4" style="height:58px;font-size:22px;font-weight:700"></label>
+  <label><span id="bMLbl">Masa muscular (lb)</span><input id="bM" type="text" inputmode="decimal" placeholder="Ej.: 32,5 (opcional)" style="height:58px;font-size:22px;font-weight:700"></label>
   <label>Grasa corporal (%)<input id="bF" type="text" inputmode="decimal" placeholder="Ej.: 28,1 (opcional)" style="height:58px;font-size:22px;font-weight:700"></label>
   <p id="bMsg" class="small sub">Tip: pesate a la misma hora, idealmente en ayunas, para comparar bien.</p>
   <button id="bSave" class="btn" style="height:58px">Guardar</button>
@@ -550,10 +557,24 @@ const S = {
 };
 
 /* ---------- perfil y zona ---------- */
+let UNIT = ((store.get('profile', {}) || {}).unit) || 'lb';
+const LB = 2.20462;
+const toU = (kg) => kg == null ? null : (UNIT === 'lb' ? kg * LB : kg);
+const toKg = (v) => v == null ? null : (UNIT === 'lb' ? v / LB : v);
+const parseNum = (v) => { if (v === '' || v == null) return null; const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : null; };
+function heightM() { const h = parseNum($('height').value); if (!h) return null; return h > 3 ? h / 100 : h; }
 function profile() {
   const num = (id) => { const v = parseFloat($(id).value); return isFinite(v) ? v : null; };
-  return { age: num('age') || 45, weight: num('weight'), rest: num('rest'), sex: $('sex').value,
+  return { age: num('age') || 45, weight: toKg(parseNum($('weight').value)), height: heightM(), rest: num('rest'), sex: $('sex').value,
     prudent: $('prudent').checked, medLimit: num('medLimit'), voseo: $('voseo').checked };
+}
+function setUnit(u) {
+  const kg = profile().weight;
+  UNIT = u;
+  if (kg) $('weight').value = (Math.round(toU(kg) * 10) / 10).toString().replace('.', ',');
+  $('weightLbl').textContent = `Peso (${UNIT})`;
+  document.querySelectorAll('[data-unit]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.unit === UNIT)));
+  saveProfile(); renderAll(); if (!$('body').classList.contains('hidden')) renderBodyScreen();
 }
 function zone() {
   const p = profile();
@@ -1272,7 +1293,8 @@ $('chTarget').addEventListener('input', () => { delete $('chForm').dataset.autoD
 
 function saveProfile() {
   const p = store.get('profile', {}) || {};
-  ['userName', 'age', 'weight', 'rest', 'sex', 'medLimit', 'activity', 'duration', 'reportEvery'].forEach(k => { p[k] = $(k).value; });
+  ['userName', 'age', 'height', 'rest', 'sex', 'medLimit', 'activity', 'duration', 'reportEvery'].forEach(k => { p[k] = $(k).value; });
+  p.weightKg = profile().weight; delete p.weight; p.unit = UNIT;
   p.prudent = $('prudent').checked; p.voseo = $('voseo').checked; p.mode = S.mode;
   store.set('profile', p);
 }
@@ -1281,7 +1303,7 @@ function renderProfileZone() {
   const z = zoneFor('moderada');
   $('profileZone').innerHTML = `<b style="color:var(--neon);font-size:17px">Tu zona moderada: ${z.low}–${z.high} lpm</b><br>${z.method}. Límite de seguridad ${z.safety} lpm.`;
 }
-['userName', 'age', 'weight', 'rest', 'sex', 'medLimit', 'prudent', 'voseo', 'activity', 'duration'].forEach(id => $(id).addEventListener('change', () => { saveProfile(); renderProfileZone(); renderHome(); }));
+['userName', 'age', 'weight', 'height', 'rest', 'sex', 'medLimit', 'prudent', 'voseo', 'activity', 'duration'].forEach(id => $(id).addEventListener('change', () => { saveProfile(); renderProfileZone(); renderHome(); }));
 
 
 /* ---------- entrenar: botones grandes ---------- */
@@ -1336,22 +1358,52 @@ function sparkline(list, k, w = 320, h = 140, color = '#3DEB8F', unit = '') {
     <circle cx="${X(last.date)}" cy="${Y(last[k])}" r="5.5" fill="${color}" stroke="#0A0F0E" stroke-width="2"/>
     <text x="34" y="${h - 4}" fill="#8E9B96" font-size="10">${fdate(kdate(pts[0].date))}</text><text x="${w - 10}" y="${h - 4}" text-anchor="end" fill="#8E9B96" font-size="10">${fdate(kdate(last.date))}</text>`;
 }
+const bodyU = () => getBody().map(e => ({ ...e, weight: toU(e.weight), muscle: toU(e.muscle) }));
+function metabolic() {
+  const p = profile(), list = getBody();
+  const lw = lastOf(list, 'weight'), lf = lastOf(list, 'fat');
+  const w = lw ? lw.v : p.weight, h = p.height, age = p.age;
+  if (!w || !h) return { need: !h ? 'Agregá tu estatura en Mi perfil para calcular tu edad metabólica e IMC.' : 'Registrá tu peso para calcular tu edad metabólica.' };
+  const bmi = w / (h * h);
+  const sexK = p.sex === 'm' ? 5 : p.sex === 'f' ? -161 : -78;
+  const expected = 10 * w + 6.25 * h * 100 - 5 * age + sexK;           // Mifflin-St Jeor: promedio para tu edad, peso y estatura
+  if (!lf) return { bmi, bmr: Math.round(expected), need: 'Registrá tu % de grasa corporal para calcular tu edad metabólica.' };
+  const lbm = w * (1 - lf.v / 100);
+  const actual = 370 + 21.6 * lbm;                                     // Katch-McArdle: según tu masa magra
+  const metAge = Math.round(Math.max(18, Math.min(age + 15, Math.max(age - 15, age + (expected - actual) / 5))));
+  return { bmi, bmr: Math.round(actual), metAge, age };
+}
+function metabolicHTML(big) {
+  const m = metabolic();
+  const bmiTxt = m.bmi ? (m.bmi < 18.5 ? 'bajo' : m.bmi < 25 ? 'normal' : m.bmi < 30 ? 'sobrepeso' : 'obesidad') : '';
+  const cells = [];
+  if (m.metAge) { const d = m.metAge - m.age;
+    cells.push(`<div class="bval"><small>Edad metab.</small><b>${m.metAge}<span class="sub" style="font-size:12px"> años</span></b><span style="color:${d <= 0 ? 'var(--neon)' : 'var(--amber)'}">${d === 0 ? 'igual a tu edad' : d < 0 ? `${-d} menos que tu edad` : `${d} más que tu edad`}</span></div>`); }
+  if (m.bmr) cells.push(`<div class="bval"><small>Metab. basal</small><b>${m.bmr.toLocaleString('es')}</b><span class="sub">kcal por día</span></div>`);
+  if (m.bmi) cells.push(`<div class="bval"><small>IMC</small><b>${f1(m.bmi)}</b><span style="color:${m.bmi < 25 && m.bmi >= 18.5 ? 'var(--neon)' : 'var(--amber)'}">${bmiTxt}</span></div>`);
+  return (cells.length ? `<div class="bvals" style="margin-top:8px">${cells.join('')}</div>` : '') +
+    (m.need ? `<p class="small" style="color:var(--amber);margin-top:6px">${m.need}</p>` : '') +
+    (big && m.metAge ? `<p class="small sub" style="margin-top:6px">Estimación: compara tu metabolismo basal según tu masa magra (Katch-McArdle) con el promedio de personas de tu edad, peso y estatura (Mifflin-St Jeor). Más músculo y menos grasa bajan tu edad metabólica. No es un dato médico.</p>` : '');
+}
 function renderBodyCard() {
-  const list = getBody();
-  if (!list.length) { $('bodySummary').innerHTML = '<p class="small sub">Registrá tu peso, masa muscular y grasa corporal para ver tu evolución.</p>'; return; }
+  const list = bodyU();
+  if (!list.length) { $('bodySummary').innerHTML = '<p class="small sub">Registrá tu peso, masa muscular y grasa corporal para ver tu evolución y tu edad metabólica.</p>'; return; }
   const v = bodyVals(list, 'prev'), lastDate = list[list.length - 1].date;
   $('bodySummary').innerHTML = `<div class="bvals">
-      <div class="bval"><small>Peso</small><b>${f1(v.weight.v)}<span class="sub" style="font-size:12px"> kg</span></b>${v.weight.d}</div>
-      <div class="bval"><small>Músculo</small><b>${f1(v.muscle.v)}<span class="sub" style="font-size:12px"> kg</span></b>${v.muscle.d}</div>
+      <div class="bval"><small>Peso</small><b>${f1(v.weight.v)}<span class="sub" style="font-size:12px"> ${UNIT}</span></b>${v.weight.d}</div>
+      <div class="bval"><small>Músculo</small><b>${f1(v.muscle.v)}<span class="sub" style="font-size:12px"> ${UNIT}</span></b>${v.muscle.d}</div>
       <div class="bval"><small>Grasa</small><b>${f1(v.fat.v)}<span class="sub" style="font-size:12px"> %</span></b>${v.fat.d}</div>
     </div>
+    ${metabolicHTML(false)}
     <svg viewBox="0 0 320 90" style="width:100%;height:auto;margin-top:8px" role="img" aria-label="Tendencia del peso">${sparkline(list, 'weight', 320, 90)}</svg>
     <p class="small sub">Último registro: ${kdate(lastDate).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}. Cambios contra el registro anterior.</p>`;
 }
 function renderBodyScreen() {
-  const list = getBody(), v = bodyVals(list, 'first');
-  $('bodyStats').innerHTML = `<div class="stat"><b>${f1(v.weight.v)}</b><span>kg</span>${v.weight.d ? `<span style="font-size:11px">${v.weight.d}</span>` : ''}</div>
-    <div class="stat"><b>${f1(v.muscle.v)}</b><span>kg músculo</span>${v.muscle.d ? `<span style="font-size:11px">${v.muscle.d}</span>` : ''}</div>
+  const list = bodyU(), v = bodyVals(list, 'first');
+  $('bodyMeta').innerHTML = metabolicHTML(true);
+  $('lblChW').textContent = `Peso (${UNIT})`; $('lblChM').textContent = `Masa muscular (${UNIT})`;
+  $('bodyStats').innerHTML = `<div class="stat"><b>${f1(v.weight.v)}</b><span>${UNIT}</span>${v.weight.d ? `<span style="font-size:11px">${v.weight.d}</span>` : ''}</div>
+    <div class="stat"><b>${f1(v.muscle.v)}</b><span>${UNIT} músculo</span>${v.muscle.d ? `<span style="font-size:11px">${v.muscle.d}</span>` : ''}</div>
     <div class="stat"><b>${f1(v.fat.v)}</b><span>% grasa</span>${v.fat.d ? `<span style="font-size:11px">${v.fat.d}</span>` : ''}</div>`;
   $('chW').innerHTML = sparkline(list, 'weight', 320, 140, '#3DEB8F');
   $('chM').innerHTML = sparkline(list, 'muscle', 320, 140, '#5AA9FF');
@@ -1365,8 +1417,10 @@ function openBodySheet() {
   $('bToday').textContent = new Date().toLocaleDateString('es', { day: 'numeric', month: 'short' });
   $('bodySheet').dataset.when = 'today'; $('bDate').value = dkey(new Date()); $('bDateWrap').classList.add('hidden');
   setOpt2('bdate', 'today');
-  $('bW').value = last.weight != null ? f1(last.weight) : (profile().weight ? f1(profile().weight) : '');
-  $('bM').value = last.muscle != null ? f1(last.muscle) : '';
+  $('bWLbl').textContent = `Peso (${UNIT})`; $('bMLbl').textContent = `Masa muscular (${UNIT})`;
+  $('bW').placeholder = UNIT === 'lb' ? 'Ej.: 190,5' : 'Ej.: 86,4'; $('bM').placeholder = UNIT === 'lb' ? 'Ej.: 70,3 (opcional)' : 'Ej.: 32,5 (opcional)';
+  $('bW').value = last.weight != null ? f1(toU(last.weight)) : (profile().weight ? f1(toU(profile().weight)) : '');
+  $('bM').value = last.muscle != null ? f1(toU(last.muscle)) : '';
   $('bF').value = last.fat != null ? f1(last.fat) : '';
   $('bMsg').textContent = 'Tip: pesate a la misma hora, idealmente en ayunas, para comparar bien.';
   $('bodySheet').classList.remove('hidden');
@@ -1374,23 +1428,24 @@ function openBodySheet() {
 function setOpt2(attr, val) { document.querySelectorAll(`#bodySheet [data-${attr}]`).forEach(b => b.setAttribute('aria-pressed', String(b.dataset[attr] === val))); }
 function saveBody() {
   const date = $('bodySheet').dataset.when === 'today' ? dkey(new Date()) : $('bDate').value;
-  const weight = num1($('bW').value), muscle = num1($('bM').value), fat = num1($('bF').value);
+  const weight = toKg(num1($('bW').value)), muscle = toKg(num1($('bM').value)), fat = num1($('bF').value);
   const bad = (x, a, b) => x != null && (x < a || x > b);
   if (!date || date > dkey(new Date())) { $('bMsg').innerHTML = '<span style="color:var(--coral)">Elegí una fecha de hoy o anterior.</span>'; return; }
   if (weight == null && muscle == null && fat == null) { $('bMsg').innerHTML = '<span style="color:var(--coral)">Escribí al menos tu peso.</span>'; $('bW').focus(); return; }
-  if (bad(weight, 25, 350) || bad(muscle, 5, 150) || bad(fat, 2, 75)) { $('bMsg').innerHTML = '<span style="color:var(--coral)">Revisá los valores: peso 25–350 kg, músculo 5–150 kg, grasa 2–75 %.</span>'; return; }
+  if (bad(weight, 25, 350) || bad(muscle, 5, 150) || bad(fat, 2, 75)) { $('bMsg').innerHTML = '<span style="color:var(--coral)">Revisá los valores: el peso, la masa muscular o la grasa (2–75 %) no parecen correctos.</span>'; return; }
   const list = getBody().filter(e => e.date !== date);
   list.push({ date, weight, muscle, fat });
   list.sort((a, b) => a.date < b.date ? -1 : 1);
   store.set('body', list);
   const lw = lastOf(list, 'weight');
-  if (lw) { $('weight').value = Math.round(lw.v * 10) / 10; saveProfile(); }
+  if (lw) { $('weight').value = (Math.round(toU(lw.v) * 10) / 10).toString().replace('.', ','); saveProfile(); }
   $('bodySheet').classList.add('hidden'); renderAll();
 }
 $('btnBodyToday').onclick = openBodySheet;
 $('btnBodyToday2').onclick = openBodySheet;
 $('bSave').onclick = saveBody;
 $('bCancel').onclick = () => $('bodySheet').classList.add('hidden');
+document.addEventListener('click', (e) => { const u = e.target.closest('[data-unit]'); if (u) setUnit(u.dataset.unit); });
 document.addEventListener('click', (e) => {
   const t = e.target.closest('[data-bdate],[data-bdel]');
   if (!t) return;
@@ -1403,13 +1458,18 @@ document.addEventListener('click', (e) => {
 function restore() {
   const p = store.get('profile', null);
   if (p) {
-    ['userName', 'age', 'weight', 'rest', 'sex', 'medLimit', 'activity', 'duration', 'reportEvery'].forEach(k => { if (p[k] !== undefined && p[k] !== null) $(k).value = p[k]; });
+    ['userName', 'age', 'height', 'rest', 'sex', 'medLimit', 'activity', 'duration', 'reportEvery'].forEach(k => { if (p[k] !== undefined && p[k] !== null) $(k).value = p[k]; });
+    const wkg = p.weightKg != null ? +p.weightKg : parseNum(p.weight);   // versiones anteriores guardaban kg en "weight"
+    if (wkg) $('weight').value = (Math.round(toU(wkg) * 10) / 10).toString().replace('.', ',');
     $('prudent').checked = !!p.prudent; $('voseo').checked = p.voseo !== false;
     if (p.mode) S.mode = p.mode;
   }
   setMode(S.mode); renderHistory();
   syncReport($('reportEvery').value);
   document.querySelectorAll('.reportEvery').forEach(el => el.addEventListener('change', () => syncReport(el.value)));
+  $('weightLbl').textContent = `Peso (${UNIT})`;
+  document.querySelectorAll('[data-unit]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.unit === UNIT)));
+  saveProfile();
   renderProfileZone(); show('home');
   if (!navigator.bluetooth) $('noBle').classList.remove('hidden');
   if (window.self !== window.top) { $('btnCsv').classList.add('hidden'); $('telNote').classList.remove('hidden'); }
