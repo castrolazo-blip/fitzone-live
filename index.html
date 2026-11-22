@@ -94,6 +94,20 @@ input:focus,select:focus{outline:2px solid var(--neon);outline-offset:1px}
 .tbl{width:100%;border-collapse:collapse;font-size:13px}
 .tbl th,.tbl td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
 .tbl th:first-child,.tbl td:first-child{text-align:left;white-space:normal}
+.acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.act{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:104px;padding:10px 6px;border-radius:18px;border:1px solid var(--line2);background:var(--bg);color:var(--text);text-align:center}
+.act b{font-size:14px;line-height:1.2}
+.act svg{color:var(--neon)}
+.act[aria-pressed="true"]{background:linear-gradient(160deg,#4CF29C,#1FB863);border:0;color:#03140A;box-shadow:0 6px 20px rgba(61,235,143,.25)}
+.act[aria-pressed="true"] svg{color:#03140A}
+.durs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.dur{display:flex;flex-direction:column;align-items:center;justify-content:center;height:68px;border-radius:16px;border:1px solid var(--line2);background:var(--bg);color:var(--text);font-size:22px;font-weight:800}
+.dur span{font-size:11px;font-weight:600;color:var(--sub)}
+.dur[aria-pressed="true"]{background:linear-gradient(160deg,#4CF29C,#1FB863);border:0;color:#03140A}
+.dur[aria-pressed="true"] span{color:#0B3A22}
+.stepper{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.stepper button{width:64px;height:56px;border-radius:16px;border:1px solid var(--line2);background:var(--bg);color:var(--text);font-size:28px;font-weight:700}
+.stepper b{font-size:24px;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -180,18 +194,30 @@ input:focus,select:focus{outline:2px solid var(--neon);outline-offset:1px}
         <button data-mode="dinamica" aria-pressed="false">Dinámica</button>
         <button data-mode="libre" aria-pressed="false">Solo medir</button>
       </div>
-      <div class="grid2">
-        <label>Actividad
-          <select id="activity">
-            <option value="caminata">Caminata</option>
-            <option value="caminata_rapida" selected>Caminata rápida</option>
-            <option value="bici">Bicicleta estática</option>
-            <option value="eliptica">Elíptica</option>
-            <option value="trote">Trote suave</option>
-          </select>
-        </label>
-        <label>Duración (min)<input id="duration" type="number" inputmode="numeric" min="5" max="180" value="40"></label>
+      <div class="lbl" style="margin-top:4px">Actividad</div>
+      <div class="acts">
+        <button class="act" data-act="caminata" aria-pressed="false"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13" cy="4" r="2"/><path d="M10 21l1.5-6 2.5 2v4M8 12l2-4 3 1 1 3 2 1M10 8l-1 5 3 2"/></svg><b>Caminata</b></button>
+        <button class="act" data-act="caminata_rapida" aria-pressed="false"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="14" cy="4" r="2"/><path d="M7 21l3-6 3 2v5M6 12l3-4 5 1 3 4M10 8l-1 6M2 9h3M1 13h3"/></svg><b>Caminata rápida</b></button>
+        <button class="act" data-act="mascota" aria-pressed="false"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="4" r="2"/><path d="M6 21l1-6 2 2v4M5 11l2-3 3 1 4 3M14 12l3 0M17 12c2 0 3 1 3 3v1h-5l-1 5M15 16l-1 5"/></svg><b>Paseo con mascotas</b></button>
+        <button class="act" data-act="bici" aria-pressed="false"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h3"/></svg><b>Bicicleta estática</b></button>
+        <button class="act" data-act="eliptica" aria-pressed="false"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M6 8l6-3 6 3M6 16l6 3 6-3"/></svg><b>Elíptica</b></button>
+        <button class="act" data-act="trote" aria-pressed="false"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="15" cy="4" r="2"/><path d="M6 21l4-5 3 2 1 3M5 12l4-4 5 1 2 3 3 1M10 8l-1 6"/></svg><b>Trote suave</b></button>
       </div>
+      <select id="activity" class="hidden" aria-hidden="true" tabindex="-1"><option value="caminata">Caminata</option><option value="caminata_rapida" selected>Caminata rápida</option><option value="mascota">Paseo con mascotas</option><option value="bici">Bicicleta estática</option><option value="eliptica">Elíptica</option><option value="trote">Trote suave</option></select>
+      <div class="lbl" style="margin-top:4px">Duración</div>
+      <div class="durs">
+        <button class="dur" data-dur="20">20<span>min</span></button>
+        <button class="dur" data-dur="30">30<span>min</span></button>
+        <button class="dur" data-dur="40">40<span>min</span></button>
+        <button class="dur" data-dur="60">60<span>min</span></button>
+        <button class="dur" data-dur="90">90<span>min</span></button>
+      </div>
+      <div class="stepper">
+        <button id="durMinus" aria-label="Menos 5 minutos">−</button>
+        <b id="durShow">40 min</b>
+        <button id="durPlus" aria-label="Más 5 minutos">+</button>
+      </div>
+      <input id="duration" type="hidden" value="40">
       <div id="zoneBox" class="ok"></div>
     </div>
 
@@ -701,7 +727,7 @@ function kcalPerMin(hr, p) {
     const f = (-20.4022 + 0.4472 * hr - 0.1263 * w + 0.074 * p.age) / 4.184;
     return Math.max(0, p.sex === 'm' ? m : p.sex === 'f' ? f : (m + f) / 2);
   }
-  const met = { caminata: 3.3, caminata_rapida: 4.3, bici: 5.0, eliptica: 5.0, trote: 7.0 }[$('activity').value] || 3.5;
+  const met = { caminata: 3.3, mascota: 3.0, caminata_rapida: 4.3, bici: 5.0, eliptica: 5.0, trote: 7.0 }[$('activity').value] || 3.5;
   return met * 3.5 * w / 200 * (S.paused ? 0 : 1);
 }
 
@@ -827,7 +853,7 @@ function show(id) {
   ['home', 'train', 'profile', 'progress', 'challenges', 'live', 'summary'].forEach(s => $(s).classList.toggle('hidden', s !== id));
   if (['home', 'progress', 'challenges'].includes(id)) renderAll();
   if (id === 'profile') renderProfileZone();
-  if (id === 'train') renderZone();
+  if (id === 'train') { renderZone(); syncTrainUI(); }
   window.scrollTo(0, 0);
 }
 function openSymptom() { $('symptomOverlay').classList.remove('hidden'); $('symAsk').classList.remove('hidden'); $('symAlert').classList.add('hidden'); if (!S.paused) togglePause(); }
@@ -1014,6 +1040,20 @@ function renderProfileZone() {
   $('profileZone').innerHTML = `<b style="color:var(--neon);font-size:17px">Tu zona moderada: ${z.low}–${z.high} lpm</b><br>${z.method}. Límite de seguridad ${z.safety} lpm.`;
 }
 ['userName', 'age', 'weight', 'rest', 'sex', 'medLimit', 'prudent', 'voseo', 'activity', 'duration'].forEach(id => $(id).addEventListener('change', () => { saveProfile(); renderProfileZone(); renderHome(); }));
+
+
+/* ---------- entrenar: botones grandes ---------- */
+function syncTrainUI() {
+  const a = $('activity').value, d = parseInt($('duration').value, 10) || 40;
+  document.querySelectorAll('.act').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.act === a)));
+  document.querySelectorAll('.dur').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.dur === d)));
+  $('durShow').textContent = d + ' min';
+}
+function setDuration(d) { $('duration').value = Math.max(5, Math.min(180, d)); syncTrainUI(); saveProfile(); }
+document.querySelectorAll('.act').forEach(b => b.onclick = () => { $('activity').value = b.dataset.act; syncTrainUI(); saveProfile(); });
+document.querySelectorAll('.dur').forEach(b => b.onclick = () => setDuration(+b.dataset.dur));
+$('durMinus').onclick = () => setDuration((parseInt($('duration').value, 10) || 40) - 5);
+$('durPlus').onclick = () => setDuration((parseInt($('duration').value, 10) || 40) + 5);
 
 /* ---------- arranque ---------- */
 function restore() {
