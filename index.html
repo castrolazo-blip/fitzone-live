@@ -83,7 +83,7 @@ input:focus,select:focus{outline:2px solid var(--neon);outline-offset:1px}
 .meter i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#4CF29C,#22C46C);transition:width .5s}
 .meter.done i{background:linear-gradient(90deg,#F5B84A,#3DEB8F)}
 .days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
-.day{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;height:54px;border-radius:12px;border:1px solid var(--line2);background:var(--bg);color:var(--sub);font-size:11px;font-weight:700}
+.day{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;height:60px;border-radius:12px;border:1px solid var(--line2);background:var(--bg);color:var(--sub);font-size:11px;font-weight:700}
 .day b{font-size:16px;color:var(--text)}
 .day:disabled{opacity:.35}
 .day.today{border-color:var(--neon)}
@@ -115,6 +115,16 @@ input:focus,select:focus{outline:2px solid var(--neon);outline-offset:1px}
 .opt[aria-pressed="true"]{background:linear-gradient(160deg,#4CF29C,#1FB863);border:0;color:#03140A}
 .opt[aria-pressed="true"] span{color:#0B3A22}
 input[type="date"]{-webkit-appearance:none;appearance:none;min-height:46px}
+.tankrow{display:flex;gap:16px;align-items:stretch}
+.tank{position:relative;width:92px;min-height:150px;flex-shrink:0;border-radius:22px;border:3px solid #2B3633;background:#0A0F0E;overflow:hidden}
+.tank .fill{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,#5CF5A6,#1FB863);box-shadow:0 0 24px rgba(61,235,143,.45);transition:height .8s ease}
+.tank .fill::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;background:rgba(255,255,255,.35)}
+.tank.done .fill{background:linear-gradient(180deg,#F8CF7E,#3DEB8F)}
+.tank .ticks{position:absolute;inset:0;background:repeating-linear-gradient(180deg,transparent 0 24px,rgba(255,255,255,.06) 24px 25px)}
+.tank b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#F4F7F6;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.tankinfo{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
+.tankinfo .tankbig{font-size:26px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.1}
+.kcal{color:var(--amber);font-weight:800}
 </style>
 </head>
 <body>
@@ -298,6 +308,13 @@ input[type="date"]{-webkit-appearance:none;appearance:none;min-height:46px}
         <button class="opt" data-type="dailyp"><b>Con parcial</b><span>ej. dieta</span></button>
       </div>
       <input id="chType" type="hidden" value="minutes">
+      <div id="logOptBox" class="hidden">
+        <div class="lbl" style="margin-bottom:8px">Al marcar “Cumplí”</div>
+        <div class="opts" style="grid-template-columns:repeat(2,minmax(0,1fr))" role="group" aria-label="Registro al cumplir">
+          <button class="opt" data-logopt="1"><b>Pedir tiempo y calorías</b></button>
+          <button class="opt" data-logopt="0"><b>Solo marcar</b></button>
+        </div>
+      </div>
 
       <div class="lbl">Período</div>
       <div class="opts" style="grid-template-columns:repeat(2,minmax(0,1fr))" role="group" aria-label="Período">
@@ -407,6 +424,26 @@ input[type="date"]{-webkit-appearance:none;appearance:none;min-height:46px}
     <button id="btnCsv" class="btn2">Descargar datos (CSV)</button>
     <button id="btnBack" class="btn">Volver al inicio</button>
   </section>
+</div>
+
+<!-- ============ REGISTRO DE TIEMPO Y CALORÍAS ============ -->
+<div id="logSheet" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="logTitle" style="overflow-y:auto">
+  <h2 id="logTitle" style="font-size:24px">Funcional</h2>
+  <p id="logDate" class="sub" style="margin-top:-8px"></p>
+  <div class="lbl">¿Cuánto tiempo?</div>
+  <div class="durs">
+    <button class="dur" data-logmin="15">15<span>min</span></button>
+    <button class="dur" data-logmin="20">20<span>min</span></button>
+    <button class="dur" data-logmin="30">30<span>min</span></button>
+    <button class="dur" data-logmin="45">45<span>min</span></button>
+    <button class="dur" data-logmin="60">60<span>min</span></button>
+  </div>
+  <div class="stepper"><button id="logMinus" aria-label="Menos 5 minutos">−</button><b id="logMinShow">30 min</b><button id="logPlus" aria-label="Más 5 minutos">+</button></div>
+  <div class="lbl">¿Cuántas calorías quemaste?</div>
+  <div class="row" style="gap:8px"><input id="logKcal" type="number" inputmode="numeric" min="0" max="3000" placeholder="kcal" style="flex:1;height:56px;font-size:20px"><button id="logEst" class="btn2" style="width:auto;padding:0 18px;height:56px">Estimar</button></div>
+  <p id="logHint" class="small sub">Si tu reloj o banda te da las calorías, usá ese número. “Estimar” calcula con tu peso y el tiempo.</p>
+  <button id="logSave" class="btn" style="height:58px">Guardar</button>
+  <button id="logCancel" class="link" style="color:var(--sub)">Cancelar</button>
 </div>
 
 <!-- ============ ALERTA DE SÍNTOMA ============ -->
@@ -830,8 +867,8 @@ async function endSession() {
   renderSummary(rec); renderHistory(); show('summary');
   const mins = getCh().filter(c => c.type === 'minutes');
   $('sumCh').classList.toggle('hidden', !mins.length);
-  $('sumCh').innerHTML = '<div class="lbl">Tus retos de minutos</div>' + mins.map(c => { const pr = chProgress(c);
-    return `<div class="chrow"><div class="row between"><b>${esc(c.name)}</b><b style="color:var(--neon)">${Math.min(999, Math.round(pr.pct * 100))} %</b></div>${meter(pr.pct)}<span class="small sub">${pr.label} · ${pr.sub}</span></div>`; }).join('');
+  $('sumCh').innerHTML = '<div class="lbl">Tu tanque de cardio</div>' + mins.map(c => { const pr = chProgress(c);
+    return `<div class="tankrow">${tank(pr.pct, true)}<div class="tankinfo"><b>${esc(c.name)}</b><span class="tankbig" style="font-size:22px">${pr.mins}<span class="sub" style="font-size:14px"> / ${c.target} min</span></span><span><span class="kcal">${pr.kcal.toLocaleString('es')} kcal</span> <span class="small sub">en el reto</span></span><span class="small sub">${pr.sub}</span></div></div>`; }).join('');
   if (mins[0]) { const v = minutesInWeek(weekStart()), c = mins[0];
     setTimeout(() => say(v >= c.target ? `Cumpliste tu reto de ${c.target} minutos esta semana. ¡Excelente!` : `Llevás ${v} de ${c.target} minutos de tu reto semanal.`.replace('Llevás', T('Llevás', 'Llevas')), 'report'), 2500); }
 }
@@ -903,19 +940,26 @@ function daysBetween(fromK, toK) { const out = []; for (let d = kdate(fromK); dk
 const TPL = {
   cardio: { name: 'Cardio 300 min', type: 'minutes', target: 300 },
   camina: { name: 'Caminar 150 min', type: 'minutes', target: 150 },
-  funcional: { name: 'Funcional diario', type: 'daily', target: 7 },
+  funcional: { name: 'Funcional diario', type: 'daily', target: 7, log: true },
   dieta: { name: 'Cumplo la dieta al 100 %', type: 'dailyp', target: 7 },
   agua: { name: 'Tomar 2 L de agua', type: 'daily', target: 7 },
 };
 function getCh() {
   let c = store.get('challenges', null);
   if (!Array.isArray(c)) { c = ['cardio', 'funcional', 'dieta'].map(k => ({ id: k, ...TPL[k], period: { mode: 'weekly' } })); store.set('challenges', c); }
-  c.forEach(x => { if (!x.period) x.period = { mode: 'weekly' }; });
+  c.forEach(x => { if (!x.period) x.period = { mode: 'weekly' }; if (x.id === 'funcional' && x.log === undefined) x.log = true; });
   return c;
 }
 const isRange = (ch) => ch.period && ch.period.mode === 'range';
 const getChecks = () => store.get('checks', {}) || {};
 const getManual = () => store.get('manual', []) || [];
+const getLogs = () => store.get('logs', {}) || {};
+const sessKcal = (r) => r.kcal ? Math.round((r.kcal[0] + r.kcal[1]) / 2) : 0;
+function kcalBetween(a, b) {
+  const fromSessions = store.get('history', []).filter(r => { const t = +new Date(r.date); return t >= a && t < b; }).reduce((s, r) => s + sessKcal(r), 0);
+  const fromManual = getManual().filter(m => { const t = +kdate(m.date); return t >= a && t < b; }).reduce((s, m) => s + (m.kcal || 0), 0);
+  return Math.round(fromSessions + fromManual);
+}
 function minutesBetween(a, b) {   // [a, b) en milisegundos
   const fromSessions = store.get('history', []).filter(r => { const t = +new Date(r.date); return t >= a && t < b; }).reduce((s, r) => s + r.secs / 60, 0);
   const fromManual = getManual().filter(m => { const t = +kdate(m.date); return t >= a && t < b; }).reduce((s, m) => s + m.min, 0);
@@ -932,8 +976,10 @@ function chProgress(ch, ws = weekStart()) {
   const left = ended ? 0 : w.days.filter(d => dkey(d) >= today).length;
   let pct, label, sub;
   if (ch.type === 'minutes') {
-    const v = minutesBetween(+kdate(w.from) - 12 * 3600e3, +kdate(w.to) + 12 * 3600e3);
+    const a0 = +kdate(w.from) - 12 * 3600e3, b0 = +kdate(w.to) + 12 * 3600e3;
+    const v = minutesBetween(a0, b0);
     pct = v / ch.target; label = `${v} de ${ch.target} min`;
+    var kcal = kcalBetween(a0, b0), mins = v;
     const rem = Math.max(0, ch.target - v);
     if (!started) sub = `Empieza el ${fdate(kdate(w.from))}`;
     else if (rem === 0) sub = '¡Reto cumplido!';
@@ -950,7 +996,13 @@ function chProgress(ch, ws = weekStart()) {
     else if (sum >= ch.target) sub = '¡Reto cumplido!';
     else sub = ch.type === 'dailyp' ? `Cumplimiento ${comp} % en los días que van` : `${comp} % de los días que van`;
   }
-  return { pct, label, sub, started, ended };
+  let logMin = 0, logKcal = 0, logDays = 0;
+  if (ch.log) { const lg = getLogs()[ch.id] || {}; w.days.forEach(d => { const e = lg[dkey(d)]; if (e) { logDays++; logMin += e.min || 0; logKcal += e.kcal || 0; } }); }
+  return { pct, label, sub, started, ended, kcal: kcal || 0, mins: mins || 0, logMin, logKcal, logDays };
+}
+function tank(pct, small) {
+  const h = Math.max(0, Math.min(100, Math.round(pct * 100)));
+  return `<div class="tank${pct >= 1 ? ' done' : ''}" style="${small ? 'width:64px;min-height:96px;border-radius:16px' : ''}" role="img" aria-label="Tanque lleno al ${h} %"><div class="fill" style="height:${h}%"></div><div class="ticks"></div><b style="${small ? 'font-size:16px' : ''}">${h}%</b></div>`;
 }
 function periodText(ch) { return isRange(ch) ? `Del ${fdate(kdate(ch.period.from))} al ${fdate(kdate(ch.period.to))}` : 'Cada semana'; }
 function streak(ch) {
@@ -970,8 +1022,34 @@ function cycle(ch, day) {
   const order = ch.type === 'dailyp' ? [undefined, 1, 0.5, 0] : [undefined, 1, 0];
   const next = order[(order.indexOf(cur) + 1) % order.length];
   if (next === undefined) delete m[k]; else m[k] = next;
-  store.set('checks', all); renderAll();
+  store.set('checks', all);
+  if (ch.log && next !== 1) { const lg = getLogs(); if (lg[ch.id]) { delete lg[ch.id][k]; store.set('logs', lg); } }
+  renderAll();
+  if (ch.log && next === 1) openLog(ch, k);
 }
+let logCtx = null;
+function openLog(ch, k) {
+  logCtx = { id: ch.id, k };
+  const prev = (getLogs()[ch.id] || {})[k] || {};
+  $('logTitle').textContent = ch.name;
+  $('logDate').textContent = kdate(k).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
+  setLogMin(prev.min || 30); $('logKcal').value = prev.kcal || '';
+  $('logHint').textContent = profile().weight ? 'Si tu reloj o banda te da las calorías, usá ese número. “Estimar” calcula con tu peso y el tiempo.' : 'Si tu reloj o banda te da las calorías, usá ese número. Para estimar, agregá tu peso en Mi perfil.';
+  $('logSheet').classList.remove('hidden');
+}
+function setLogMin(m) {
+  m = Math.max(5, Math.min(240, m)); $('logSheet').dataset.min = m; $('logMinShow').textContent = m + ' min';
+  document.querySelectorAll('[data-logmin]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.logmin === m)));
+}
+function closeLog() { $('logSheet').classList.add('hidden'); logCtx = null; }
+$('logMinus').onclick = () => setLogMin(+$('logSheet').dataset.min - 5);
+$('logPlus').onclick = () => setLogMin(+$('logSheet').dataset.min + 5);
+$('logEst').onclick = () => { const w = profile().weight; if (!w) { $('logHint').innerHTML = '<span style="color:var(--amber)">Agregá tu peso en Mi perfil para estimar.</span>'; return; }
+  $('logKcal').value = Math.round(5.0 * 3.5 * w / 200 * +$('logSheet').dataset.min); };   // entrenamiento funcional ≈ 5 MET
+$('logSave').onclick = () => { if (!logCtx) return; const lg = getLogs(); const m = lg[logCtx.id] || (lg[logCtx.id] = {});
+  const kc = parseInt($('logKcal').value, 10); m[logCtx.k] = { min: +$('logSheet').dataset.min, kcal: kc > 0 ? kc : 0 };
+  store.set('logs', lg); closeLog(); renderAll(); };
+$('logCancel').onclick = closeLog;
 function activeToday(ch) { const t = dkey(new Date()), w = chWindow(ch); return t >= w.from && t <= w.to; }
 function renderHome() {
   const p = profile(), name = ($('userName').value || '').trim();
@@ -991,10 +1069,11 @@ function renderHome() {
   const checks = getChecks(), tk = dkey(now);
   $('todayChecks').innerHTML = daily.map(c => {
     const v = (checks[c.id] || {})[tk]; const st = STATE[v];
-    return `<button class="todaybtn" data-today="${c.id}"><span>${esc(c.name)}</span><span class="state" style="${st ? `color:${st[1]};background:${st[2]}` : 'color:#A1AEA9;background:rgba(161,174,169,.14)'}">${st ? st[0] : 'Marcar'}</span></button>`;
+    const lg = c.log && v === 1 ? (getLogs()[c.id] || {})[tk] : null;
+    return `<button class="todaybtn" data-today="${c.id}"><span>${esc(c.name)}${lg ? `<br><span class="small sub" style="font-weight:600">${lg.min} min${lg.kcal ? ` · ${lg.kcal} kcal` : ''}</span>` : ''}</span><span class="state" style="${st ? `color:${st[1]};background:${st[2]}` : 'color:#A1AEA9;background:rgba(161,174,169,.14)'}">${st ? st[0] : 'Marcar'}</span></button>`;
   }).join('');
   $('homeChallenges').innerHTML = chs.length ? chs.map(c => { const pr = chProgress(c);
-    return `<div class="chrow"><div class="row between"><b style="font-size:15px">${esc(c.name)}</b><b style="color:${pr.pct >= 1 ? 'var(--amber)' : 'var(--neon)'}">${Math.min(999, Math.round(pr.pct * 100))} %</b></div>${meter(pr.pct)}<span class="small sub">${periodText(c)} · ${pr.label} · ${pr.sub}</span></div>`; }).join('')
+    return `<div class="chrow"><div class="row between"><b style="font-size:15px">${esc(c.name)}</b><b style="color:${pr.pct >= 1 ? 'var(--amber)' : 'var(--neon)'}">${Math.min(999, Math.round(pr.pct * 100))} %</b></div>${meter(pr.pct)}<span class="small sub">${periodText(c)} · ${pr.label}${c.type === 'minutes' && pr.kcal ? ` · <span class="kcal">${pr.kcal} kcal</span>` : ''}${c.log && pr.logMin ? ` · ${pr.logMin} min · <span class="kcal">${pr.logKcal} kcal</span>` : ''} · ${pr.sub}</span></div>`; }).join('')
     : '<span class="sub small">Todavía no tenés retos.</span>';
 }
 function renderChallenges() {
@@ -1004,20 +1083,30 @@ function renderChallenges() {
     const pr = chProgress(c), st = streak(c), w = chWindow(c);
     let body = '';
     if (c.type === 'minutes') {
-      body = pr.started && !pr.ended ? `<div class="row" style="gap:8px"><input id="man-${c.id}" type="number" inputmode="numeric" min="1" max="600" placeholder="Minutos extra" style="flex:1"><button class="btn2" data-addmin="${c.id}" style="width:auto;padding:0 16px">Agregar</button></div>
-        <span class="small sub">Tus sesiones de FIT ZONE se suman solas. Usá “Agregar” para ejercicio sin la app (clase, caminata sin banda).</span>` : '';
+      const live = pr.started && !pr.ended;
+      body = `<div class="tankrow">${tank(pr.pct)}<div class="tankinfo">
+          <span class="tankbig">${pr.mins}<span class="sub" style="font-size:16px;font-weight:700"> / ${c.target} min</span></span>
+          <span><span class="kcal">${pr.kcal.toLocaleString('es')} kcal</span> <span class="small sub">quemadas (estimadas)</span></span>
+          <span class="small sub">${pr.sub}</span>
+          ${live ? `<button class="btn" data-go="train" style="height:52px;margin-top:auto">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#03140A" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>Iniciar cardio</button>` : ''}
+        </div></div>
+        ${live ? `<details><summary class="small" style="color:var(--neon);font-weight:700;cursor:pointer;padding:6px 0">Agregar minutos hechos sin la app</summary>
+          <div class="row" style="gap:8px;margin-top:8px"><input id="man-${c.id}" type="number" inputmode="numeric" min="1" max="600" placeholder="Min" style="flex:1"><input id="mank-${c.id}" type="number" inputmode="numeric" min="0" max="3000" placeholder="kcal" style="flex:1"><button class="btn2" data-addmin="${c.id}" style="width:auto;padding:0 14px">Agregar</button></div>
+        </details>` : ''}`;
     } else {
       // 7 días: la semana actual, o en fechas fijas los últimos 7 días del período hasta hoy
       let days = isRange(c) ? w.days.filter(d => dkey(d) <= (tk < w.to ? tk : w.to)).slice(-7) : w.days;
       if (isRange(c) && days.length < 7) days = w.days.slice(0, 7);
       body = `<div class="days">${days.map(d => { const k = dkey(d), v = (checks[c.id] || {})[k], s = STATE[v];
-        return `<button class="day${k === tk ? ' today' : ''}" data-day="${c.id}|${k}" ${k > tk ? 'disabled' : ''} aria-label="${d.toLocaleDateString('es', { weekday: 'long', day: 'numeric' })}: ${s ? s[0] : 'sin marcar'}" style="${s ? `border-color:${s[1]};background:${s[2]}` : ''}">${DOW[(d.getDay() + 6) % 7]}${isRange(c) ? `<span style="font-size:9px">${d.getDate()}</span>` : ''}<b style="${s ? `color:${s[1]}` : ''}">${v === 1 ? '✓' : v === 0.5 ? '½' : v === 0 ? '✗' : '·'}</b></button>`; }).join('')}</div>
+        return `<button class="day${k === tk ? ' today' : ''}" data-day="${c.id}|${k}" ${k > tk ? 'disabled' : ''} aria-label="${d.toLocaleDateString('es', { weekday: 'long', day: 'numeric' })}: ${s ? s[0] : 'sin marcar'}" style="${s ? `border-color:${s[1]};background:${s[2]}` : ''}">${DOW[(d.getDay() + 6) % 7]}${isRange(c) ? `<span style="font-size:9px">${d.getDate()}</span>` : ''}<b style="${s ? `color:${s[1]}` : ''}">${v === 1 ? '✓' : v === 0.5 ? '½' : v === 0 ? '✗' : '·'}</b>${c.log && v === 1 && (getLogs()[c.id] || {})[k] ? `<span style="font-size:9px;color:var(--neon)">${(getLogs()[c.id] || {})[k].min}′</span>` : ''}</button>`; }).join('')}</div>
         <span class="small sub">Tocá un día para marcarlo: ${c.type === 'dailyp' ? 'cumplí → parcial → no → sin marcar' : 'cumplí → no → sin marcar'}.</span>`;
     }
     return `<div class="card" style="gap:10px">
       <div class="row between" style="align-items:flex-start"><div><b style="font-size:17px">${esc(c.name)}</b><div class="small sub">${periodText(c)}${st ? ` · racha ${st} semana${st > 1 ? 's' : ''}` : ''}</div></div>
         <b style="font-size:22px;color:${pr.pct >= 1 ? 'var(--amber)' : 'var(--neon)'}">${Math.min(999, Math.round(pr.pct * 100))} %</b></div>
-      ${meter(pr.pct)}<div class="row between small" style="gap:8px;flex-wrap:wrap"><span>${pr.label}</span><span class="sub">${pr.sub}</span></div>
+      ${c.type === 'minutes' ? '' : `${meter(pr.pct)}<div class="row between small" style="gap:8px;flex-wrap:wrap"><span>${pr.label}</span><span class="sub">${pr.sub}</span></div>`}
+      ${c.log && pr.logDays ? `<div class="row" style="gap:16px;font-size:14px"><span><b>${pr.logMin}</b> <span class="sub">min</span></span><span class="kcal">${pr.logKcal.toLocaleString('es')} kcal</span><span class="sub">en ${pr.logDays} día${pr.logDays > 1 ? 's' : ''}</span></div>` : ''}
       ${body}
       <div class="row" style="gap:16px"><button class="link" data-edit="${c.id}" style="padding:4px 0">Editar</button><button class="link" data-del="${c.id}" style="color:var(--sub);padding:4px 0">Eliminar</button></div>
     </div>`;
@@ -1053,7 +1142,8 @@ let editingId = null;
 function setOpt(attr, val) { document.querySelectorAll(`[data-${attr}]`).forEach(b => { if (b.closest('#chForm')) b.setAttribute('aria-pressed', String(b.dataset[attr] === val)); }); }
 function chFormSync() {
   const t = $('chType').value, range = $('chForm').dataset.period === 'range';
-  setOpt('type', t); setOpt('period', range ? 'range' : 'weekly');
+  setOpt('type', t); setOpt('period', range ? 'range' : 'weekly'); setOpt('logopt', $('chForm').dataset.log === '1' ? '1' : '0');
+  $('logOptBox').classList.toggle('hidden', t !== 'daily');
   $('rangeBox').classList.toggle('hidden', !range);
   let nDays = 7;
   if (range && $('chFrom').value && $('chTo').value && $('chTo').value >= $('chFrom').value) {
@@ -1080,7 +1170,7 @@ function openChForm(tpl, editId) {
   $('chFormTitle').textContent = c ? 'Editar reto' : 'Nuevo reto';
   $('chTpls').classList.toggle('hidden', !!c);
   $('chSave').textContent = c ? 'Guardar cambios' : 'Crear reto';
-  $('chName').value = t.name; $('chType').value = t.type; $('chTarget').value = t.target;
+  $('chName').value = t.name; $('chType').value = t.type; $('chTarget').value = t.target; $('chForm').dataset.log = t.log ? '1' : '0';
   delete $('chForm').dataset.autoDays;
   if (t.type !== 'minutes' && (!c || c.target === chWindow(c).days.length)) $('chForm').dataset.autoDays = '1';
   const per = (c && c.period) || $('chForm').dataset.keepPeriod && null;
@@ -1105,18 +1195,20 @@ function saveChForm() {
   if (!(target > 0)) target = type === 'minutes' ? 150 : maxDays;
   if (type !== 'minutes') target = Math.min(maxDays, target);
   const list = getCh();
-  if (editingId) { const c = list.find(x => x.id === editingId); Object.assign(c, { name, type, target, period }); }
-  else list.push({ id: 'c' + Date.now().toString(36), name, type, target, period });
+  const log = type === 'daily' && $('chForm').dataset.log === '1';
+  if (editingId) { const c = list.find(x => x.id === editingId); Object.assign(c, { name, type, target, period, log }); }
+  else list.push({ id: 'c' + Date.now().toString(36), name, type, target, period, log });
   store.set('challenges', list); closeChForm(); renderAll();
 }
 document.addEventListener('click', (e) => {
-  const t = e.target.closest('[data-today],[data-day],[data-addmin],[data-del],[data-edit],[data-tpl],[data-go],[data-type],[data-period],[data-preset]');
+  const t = e.target.closest('[data-today],[data-day],[data-addmin],[data-del],[data-edit],[data-tpl],[data-go],[data-type],[data-period],[data-preset],[data-logopt],[data-logmin]');
   if (!t) return;
   if (t.dataset.go) { show(t.dataset.go); if (t.dataset.new) openChForm(); return; }
   if (t.dataset.today) { const c = getCh().find(x => x.id === t.dataset.today); if (c) cycle(c, new Date()); return; }
   if (t.dataset.day) { const [id, k] = t.dataset.day.split('|'); const c = getCh().find(x => x.id === id); if (c) cycle(c, kdate(k)); return; }
   if (t.dataset.addmin) { const inp = $('man-' + t.dataset.addmin), v = parseInt(inp.value, 10);
-    if (v > 0 && v <= 600) { const m = getManual(); m.push({ date: dkey(new Date()), min: v }); store.set('manual', m); renderAll(); } else inp.focus(); return; }
+    const kc = parseInt(($('mank-' + t.dataset.addmin) || {}).value, 10);
+    if (v > 0 && v <= 600) { const m = getManual(); m.push({ date: dkey(new Date()), min: v, kcal: kc > 0 ? kc : 0 }); store.set('manual', m); renderAll(); } else inp.focus(); return; }
   if (t.dataset.del) { if (!t.dataset.armed) { t.dataset.armed = '1'; t.textContent = 'Tocá de nuevo para eliminar'; t.style.color = 'var(--coral)'; setTimeout(() => renderChallenges(), 4000); return; }
     store.set('challenges', getCh().filter(x => x.id !== t.dataset.del)); renderAll(); return; }
   if (t.dataset.edit) { openChForm(null, t.dataset.edit); return; }
@@ -1124,6 +1216,8 @@ document.addEventListener('click', (e) => {
   if (t.dataset.type) { $('chType').value = t.dataset.type; if (t.dataset.type !== 'minutes') $('chForm').dataset.autoDays = '1'; chFormSync(); return; }
   if (t.dataset.period) { $('chForm').dataset.period = t.dataset.period; if (t.dataset.period === 'range' && !$('chFrom').value) preset('7'); chFormSync(); return; }
   if (t.dataset.preset) { preset(t.dataset.preset); return; }
+  if (t.dataset.logopt) { $('chForm').dataset.log = t.dataset.logopt; chFormSync(); return; }
+  if (t.dataset.logmin) { setLogMin(+t.dataset.logmin); return; }
 });
 $('btnNewCh').onclick = () => openChForm();
 $('chCancel').onclick = closeChForm;
