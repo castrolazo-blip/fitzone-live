@@ -108,6 +108,13 @@ input:focus,select:focus{outline:2px solid var(--neon);outline-offset:1px}
 .stepper{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .stepper button{width:64px;height:56px;border-radius:16px;border:1px solid var(--line2);background:var(--bg);color:var(--text);font-size:28px;font-weight:700}
 .stepper b{font-size:24px;font-variant-numeric:tabular-nums}
+.opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.opt{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:64px;padding:8px 6px;border-radius:14px;border:1px solid var(--line2);background:var(--bg);color:var(--text);text-align:center}
+.opt b{font-size:14px}
+.opt span{font-size:11px;color:var(--sub)}
+.opt[aria-pressed="true"]{background:linear-gradient(160deg,#4CF29C,#1FB863);border:0;color:#03140A}
+.opt[aria-pressed="true"] span{color:#0B3A22}
+input[type="date"]{-webkit-appearance:none;appearance:none;min-height:46px}
 </style>
 </head>
 <body>
@@ -269,29 +276,50 @@ input:focus,select:focus{outline:2px solid var(--neon);outline-offset:1px}
   <!-- ============ MIS RETOS ============ -->
   <section id="challenges" class="wrap hidden" style="padding:0">
     <div class="topbar"><button class="backbtn" data-go="home" aria-label="Volver al inicio">‹</button><h2>Mis retos</h2></div>
-    <p class="small sub">Semana del <span id="chWeek"></span>. Los retos se reinician cada lunes.</p>
+    <p class="small sub">Semana del <span id="chWeek"></span>. Los retos semanales se reinician cada lunes; los de fechas fijas cuentan solo entre sus fechas.</p>
     <div id="chList" style="display:flex;flex-direction:column;gap:12px"></div>
 
     <button id="btnNewCh" class="btn2">+ Nuevo reto</button>
     <div id="chForm" class="card hidden">
-      <div class="lbl">Nuevo reto</div>
-      <div class="row" style="flex-wrap:wrap;gap:6px">
+      <div id="chFormTitle" class="lbl">Nuevo reto</div>
+      <div id="chTpls" class="row" style="flex-wrap:wrap;gap:6px">
         <button class="chipbtn" data-tpl="cardio">Cardio 300 min</button>
         <button class="chipbtn" data-tpl="camina">Caminar 150 min</button>
         <button class="chipbtn" data-tpl="funcional">Funcional diario</button>
         <button class="chipbtn" data-tpl="dieta">Dieta al 100 %</button>
         <button class="chipbtn" data-tpl="agua">Tomar 2 L de agua</button>
       </div>
-      <label>Nombre del reto<input id="chName" type="text" maxlength="40" placeholder="Ej.: Cardio 300 min por semana"></label>
-      <label>Tipo
-        <select id="chType">
-          <option value="minutes">Minutos de ejercicio por semana</option>
-          <option value="daily">Hábito diario (cumplí / no)</option>
-          <option value="dailyp">Hábito diario con parcial (cumplí / parcial / no)</option>
-        </select>
-      </label>
-      <label><span id="chTargetLbl">Meta de minutos por semana</span><input id="chTarget" type="number" inputmode="numeric" min="1" value="300"></label>
-      <div class="grid2"><button id="chSave" class="btn" style="height:48px">Crear reto</button><button id="chCancel" class="btn2">Cancelar</button></div>
+      <label>Nombre del reto<input id="chName" type="text" maxlength="40" placeholder="Ej.: Cardio 300 min"></label>
+
+      <div class="lbl">Tipo</div>
+      <div class="opts" role="group" aria-label="Tipo de reto">
+        <button class="opt" data-type="minutes"><b>Minutos</b><span>de ejercicio</span></button>
+        <button class="opt" data-type="daily"><b>Hábito diario</b><span>cumplí / no</span></button>
+        <button class="opt" data-type="dailyp"><b>Con parcial</b><span>ej. dieta</span></button>
+      </div>
+      <input id="chType" type="hidden" value="minutes">
+
+      <div class="lbl">Período</div>
+      <div class="opts" style="grid-template-columns:repeat(2,minmax(0,1fr))" role="group" aria-label="Período">
+        <button class="opt" data-period="weekly"><b>Cada semana</b><span>se reinicia el lunes</span></button>
+        <button class="opt" data-period="range"><b>Fechas fijas</b><span>desde – hasta</span></button>
+      </div>
+      <div id="rangeBox" class="hidden" style="display:flex;flex-direction:column;gap:10px">
+        <div class="opts" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+          <button class="opt" data-preset="7"><b>Próximos 7 días</b></button>
+          <button class="opt" data-preset="30"><b>Próximos 30 días</b></button>
+          <button class="opt" data-preset="month"><b>Este mes</b></button>
+          <button class="opt" data-preset="next"><b>Próximo mes</b></button>
+        </div>
+        <div class="grid2">
+          <label>Desde<input id="chFrom" type="date"></label>
+          <label>Hasta<input id="chTo" type="date"></label>
+        </div>
+        <div id="rangeInfo" class="small sub"></div>
+      </div>
+
+      <label><span id="chTargetLbl">Meta de minutos</span><input id="chTarget" type="number" inputmode="numeric" min="1" value="300"></label>
+      <div class="grid2"><button id="chSave" class="btn" style="height:52px">Crear reto</button><button id="chCancel" class="btn2" style="height:52px">Cancelar</button></div>
     </div>
   </section>
 
@@ -867,42 +895,66 @@ function reportSymptom(s) {
 const DAY = 864e5;
 const DOW = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 const dkey = (d) => { const x = new Date(d); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+const kdate = (k) => new Date(k + 'T12:00');
+const fdate = (d) => new Date(d).toLocaleDateString('es', { day: 'numeric', month: 'short' });
 function weekStart(d = new Date()) { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; }
 function weekDays(ws) { return Array.from({ length: 7 }, (_, i) => { const x = new Date(ws); x.setDate(x.getDate() + i); return x; }); }
+function daysBetween(fromK, toK) { const out = []; for (let d = kdate(fromK); dkey(d) <= toK; d.setDate(d.getDate() + 1)) out.push(new Date(d)); return out; }
 const TPL = {
-  cardio: { name: 'Cardio 300 min por semana', type: 'minutes', target: 300 },
-  camina: { name: 'Caminar 150 min por semana', type: 'minutes', target: 150 },
+  cardio: { name: 'Cardio 300 min', type: 'minutes', target: 300 },
+  camina: { name: 'Caminar 150 min', type: 'minutes', target: 150 },
   funcional: { name: 'Funcional diario', type: 'daily', target: 7 },
   dieta: { name: 'Cumplo la dieta al 100 %', type: 'dailyp', target: 7 },
   agua: { name: 'Tomar 2 L de agua', type: 'daily', target: 7 },
 };
 function getCh() {
   let c = store.get('challenges', null);
-  if (!Array.isArray(c)) { c = ['cardio', 'funcional', 'dieta'].map(k => ({ id: k, ...TPL[k] })); store.set('challenges', c); }
+  if (!Array.isArray(c)) { c = ['cardio', 'funcional', 'dieta'].map(k => ({ id: k, ...TPL[k], period: { mode: 'weekly' } })); store.set('challenges', c); }
+  c.forEach(x => { if (!x.period) x.period = { mode: 'weekly' }; });
   return c;
 }
+const isRange = (ch) => ch.period && ch.period.mode === 'range';
 const getChecks = () => store.get('checks', {}) || {};
 const getManual = () => store.get('manual', []) || [];
-function minutesInWeek(ws) {
-  const a = +ws, b = a + 7 * DAY;
+function minutesBetween(a, b) {   // [a, b) en milisegundos
   const fromSessions = store.get('history', []).filter(r => { const t = +new Date(r.date); return t >= a && t < b; }).reduce((s, r) => s + r.secs / 60, 0);
-  const fromManual = getManual().filter(m => { const t = +new Date(m.date + 'T12:00'); return t >= a && t < b; }).reduce((s, m) => s + m.min, 0);
+  const fromManual = getManual().filter(m => { const t = +kdate(m.date); return t >= a && t < b; }).reduce((s, m) => s + m.min, 0);
   return Math.round(fromSessions + fromManual);
 }
-function chProgress(ch, ws = weekStart()) {
-  if (ch.type === 'minutes') {
-    const v = minutesInWeek(ws);
-    return { pct: v / ch.target, label: `${v} de ${ch.target} min`, sub: v >= ch.target ? '¡Reto cumplido!' : `Faltan ${ch.target - v} min` };
-  }
-  const marks = (getChecks()[ch.id]) || {}, days = weekDays(ws), today = dkey(new Date());
-  const sum = days.reduce((s, d) => s + (marks[dkey(d)] || 0), 0);
-  const elapsed = days.filter(d => dkey(d) <= today).length || 1;
-  const n = (x) => String(Math.round(x * 10) / 10).replace('.', ',');
-  const comp = Math.round(sum / Math.min(elapsed, 7) * 100);
-  return { pct: sum / ch.target, label: `${n(sum)} de ${ch.target} días`,
-    sub: ch.type === 'dailyp' ? `Cumplimiento ${comp} % en los días que van` : (sum >= ch.target ? '¡Reto cumplido!' : `${comp} % de los días que van`) };
+const minutesInWeek = (ws) => minutesBetween(+ws, +ws + 7 * DAY);
+function chWindow(ch, ws = weekStart()) {   // días que cuenta el reto ahora
+  if (!isRange(ch)) { const days = weekDays(ws); return { from: dkey(days[0]), to: dkey(days[6]), days }; }
+  return { from: ch.period.from, to: ch.period.to, days: daysBetween(ch.period.from, ch.period.to) };
 }
+function chProgress(ch, ws = weekStart()) {
+  const w = chWindow(ch, ws), today = dkey(new Date());
+  const started = today >= w.from, ended = today > w.to;
+  const left = ended ? 0 : w.days.filter(d => dkey(d) >= today).length;
+  let pct, label, sub;
+  if (ch.type === 'minutes') {
+    const v = minutesBetween(+kdate(w.from) - 12 * 3600e3, +kdate(w.to) + 12 * 3600e3);
+    pct = v / ch.target; label = `${v} de ${ch.target} min`;
+    const rem = Math.max(0, ch.target - v);
+    if (!started) sub = `Empieza el ${fdate(kdate(w.from))}`;
+    else if (rem === 0) sub = '¡Reto cumplido!';
+    else if (ended) sub = 'Terminó sin cumplir';
+    else sub = `Faltan ${rem} min · ${left} día${left !== 1 ? 's' : ''} · ~${Math.ceil(rem / left)} min por día`;
+  } else {
+    const marks = (getChecks()[ch.id]) || {};
+    const sum = w.days.reduce((s, d) => s + (marks[dkey(d)] || 0), 0);
+    const elapsed = w.days.filter(d => dkey(d) <= today).length;
+    const n = (x) => String(Math.round(x * 10) / 10).replace('.', ',');
+    pct = sum / ch.target; label = `${n(sum)} de ${ch.target} días`;
+    const comp = elapsed ? Math.round(sum / elapsed * 100) : 0;
+    if (!started) sub = `Empieza el ${fdate(kdate(w.from))}`;
+    else if (sum >= ch.target) sub = '¡Reto cumplido!';
+    else sub = ch.type === 'dailyp' ? `Cumplimiento ${comp} % en los días que van` : `${comp} % de los días que van`;
+  }
+  return { pct, label, sub, started, ended };
+}
+function periodText(ch) { return isRange(ch) ? `Del ${fdate(kdate(ch.period.from))} al ${fdate(kdate(ch.period.to))}` : 'Cada semana'; }
 function streak(ch) {
+  if (isRange(ch)) return 0;
   let n = 0, ws = weekStart(); ws.setDate(ws.getDate() - 7);
   for (let i = 0; i < 52; i++) { if (chProgress(ch, ws).pct >= 1) { n++; ws.setDate(ws.getDate() - 7); } else break; }
   return n;
@@ -920,6 +972,7 @@ function cycle(ch, day) {
   if (next === undefined) delete m[k]; else m[k] = next;
   store.set('checks', all); renderAll();
 }
+function activeToday(ch) { const t = dkey(new Date()), w = chWindow(ch); return t >= w.from && t <= w.to; }
 function renderHome() {
   const p = profile(), name = ($('userName').value || '').trim();
   const now = new Date();
@@ -927,13 +980,12 @@ function renderHome() {
   $('homeHello').textContent = name ? `Hola, ${name}` : 'Hola';
   const chs = getCh(), ws = weekStart();
   const done = chs.filter(c => chProgress(c).pct >= 1).length;
-  $('tileRetos').textContent = chs.length ? `${done} de ${chs.length} cumplidos esta semana` : 'Creá tu primer reto';
+  $('tileRetos').textContent = chs.length ? `${done} de ${chs.length} cumplidos` : 'Creá tu primer reto';
   $('tileAvances').textContent = `${minutesInWeek(ws)} min activos esta semana`;
   const z = zoneFor('moderada');
   $('tileProfile').textContent = `${p.age} años · zona ${z.low}–${z.high}`;
-  $('weekLbl').textContent = 'Semana del ' + ws.toLocaleDateString('es', { day: 'numeric', month: 'short' });
-  // hoy
-  const daily = chs.filter(c => c.type !== 'minutes');
+  $('weekLbl').textContent = 'Semana del ' + fdate(ws);
+  const daily = chs.filter(c => c.type !== 'minutes' && activeToday(c));
   $('todayCard').classList.toggle('hidden', !daily.length);
   $('todayLbl').textContent = 'Tocá para marcar';
   const checks = getChecks(), tk = dkey(now);
@@ -942,29 +994,32 @@ function renderHome() {
     return `<button class="todaybtn" data-today="${c.id}"><span>${esc(c.name)}</span><span class="state" style="${st ? `color:${st[1]};background:${st[2]}` : 'color:#A1AEA9;background:rgba(161,174,169,.14)'}">${st ? st[0] : 'Marcar'}</span></button>`;
   }).join('');
   $('homeChallenges').innerHTML = chs.length ? chs.map(c => { const pr = chProgress(c);
-    return `<div class="chrow"><div class="row between"><b style="font-size:15px">${esc(c.name)}</b><b style="color:${pr.pct >= 1 ? 'var(--amber)' : 'var(--neon)'}">${Math.min(999, Math.round(pr.pct * 100))} %</b></div>${meter(pr.pct)}<span class="small sub">${pr.label} · ${pr.sub}</span></div>`; }).join('')
+    return `<div class="chrow"><div class="row between"><b style="font-size:15px">${esc(c.name)}</b><b style="color:${pr.pct >= 1 ? 'var(--amber)' : 'var(--neon)'}">${Math.min(999, Math.round(pr.pct * 100))} %</b></div>${meter(pr.pct)}<span class="small sub">${periodText(c)} · ${pr.label} · ${pr.sub}</span></div>`; }).join('')
     : '<span class="sub small">Todavía no tenés retos.</span>';
 }
 function renderChallenges() {
-  const ws = weekStart(), days = weekDays(ws), tk = dkey(new Date()), checks = getChecks();
-  $('chWeek').textContent = ws.toLocaleDateString('es', { day: 'numeric', month: 'long' });
+  const tk = dkey(new Date()), checks = getChecks();
+  $('chWeek').textContent = fdate(weekStart());
   $('chList').innerHTML = getCh().map(c => {
-    const pr = chProgress(c), st = streak(c);
+    const pr = chProgress(c), st = streak(c), w = chWindow(c);
     let body = '';
     if (c.type === 'minutes') {
-      body = `<div class="row" style="gap:8px"><input id="man-${c.id}" type="number" inputmode="numeric" min="1" max="600" placeholder="Minutos extra" style="flex:1"><button class="btn2" data-addmin="${c.id}" style="width:auto;padding:0 16px">Agregar</button></div>
-        <span class="small sub">Tus sesiones de FIT ZONE se suman solas. Usá “Agregar” para ejercicio sin la app (clase, caminata sin banda).</span>`;
+      body = pr.started && !pr.ended ? `<div class="row" style="gap:8px"><input id="man-${c.id}" type="number" inputmode="numeric" min="1" max="600" placeholder="Minutos extra" style="flex:1"><button class="btn2" data-addmin="${c.id}" style="width:auto;padding:0 16px">Agregar</button></div>
+        <span class="small sub">Tus sesiones de FIT ZONE se suman solas. Usá “Agregar” para ejercicio sin la app (clase, caminata sin banda).</span>` : '';
     } else {
-      body = `<div class="days">${days.map((d, i) => { const k = dkey(d), v = (checks[c.id] || {})[k], s = STATE[v];
-        return `<button class="day${k === tk ? ' today' : ''}" data-day="${c.id}|${k}" ${k > tk ? 'disabled' : ''} aria-label="${d.toLocaleDateString('es', { weekday: 'long' })}: ${s ? s[0] : 'sin marcar'}" style="${s ? `border-color:${s[1]};background:${s[2]}` : ''}">${DOW[i]}<b style="${s ? `color:${s[1]}` : ''}">${v === 1 ? '✓' : v === 0.5 ? '½' : v === 0 ? '✗' : '·'}</b></button>`; }).join('')}</div>
+      // 7 días: la semana actual, o en fechas fijas los últimos 7 días del período hasta hoy
+      let days = isRange(c) ? w.days.filter(d => dkey(d) <= (tk < w.to ? tk : w.to)).slice(-7) : w.days;
+      if (isRange(c) && days.length < 7) days = w.days.slice(0, 7);
+      body = `<div class="days">${days.map(d => { const k = dkey(d), v = (checks[c.id] || {})[k], s = STATE[v];
+        return `<button class="day${k === tk ? ' today' : ''}" data-day="${c.id}|${k}" ${k > tk ? 'disabled' : ''} aria-label="${d.toLocaleDateString('es', { weekday: 'long', day: 'numeric' })}: ${s ? s[0] : 'sin marcar'}" style="${s ? `border-color:${s[1]};background:${s[2]}` : ''}">${DOW[(d.getDay() + 6) % 7]}${isRange(c) ? `<span style="font-size:9px">${d.getDate()}</span>` : ''}<b style="${s ? `color:${s[1]}` : ''}">${v === 1 ? '✓' : v === 0.5 ? '½' : v === 0 ? '✗' : '·'}</b></button>`; }).join('')}</div>
         <span class="small sub">Tocá un día para marcarlo: ${c.type === 'dailyp' ? 'cumplí → parcial → no → sin marcar' : 'cumplí → no → sin marcar'}.</span>`;
     }
     return `<div class="card" style="gap:10px">
-      <div class="row between" style="align-items:flex-start"><div><b style="font-size:17px">${esc(c.name)}</b><div class="small sub">${c.type === 'minutes' ? 'Minutos por semana' : c.type === 'dailyp' ? 'Hábito diario con parcial' : 'Hábito diario'}${st ? ` · racha ${st} semana${st > 1 ? 's' : ''}` : ''}</div></div>
+      <div class="row between" style="align-items:flex-start"><div><b style="font-size:17px">${esc(c.name)}</b><div class="small sub">${periodText(c)}${st ? ` · racha ${st} semana${st > 1 ? 's' : ''}` : ''}</div></div>
         <b style="font-size:22px;color:${pr.pct >= 1 ? 'var(--amber)' : 'var(--neon)'}">${Math.min(999, Math.round(pr.pct * 100))} %</b></div>
-      ${meter(pr.pct)}<div class="row between small"><span>${pr.label}</span><span class="sub">${pr.sub}</span></div>
+      ${meter(pr.pct)}<div class="row between small" style="gap:8px;flex-wrap:wrap"><span>${pr.label}</span><span class="sub">${pr.sub}</span></div>
       ${body}
-      <button class="link" data-del="${c.id}" style="align-self:flex-start;color:var(--sub);padding:4px 0">Eliminar reto</button>
+      <div class="row" style="gap:16px"><button class="link" data-edit="${c.id}" style="padding:4px 0">Editar</button><button class="link" data-del="${c.id}" style="color:var(--sub);padding:4px 0">Eliminar</button></div>
     </div>`;
   }).join('') || '<div class="card sub small">No tenés retos. Creá uno abajo.</div>';
 }
@@ -973,7 +1028,7 @@ function renderProgress() {
   const wk = hist.filter(r => +new Date(r.date) >= +ws);
   const zoneMin = Math.round(wk.reduce((s, r) => s + r.zone, 0) / 60);
   $('progStats').innerHTML = `<div class="stat"><b>${minutesInWeek(ws)}</b><span>min esta semana</span></div><div class="stat"><b>${wk.length}</b><span>sesiones</span></div><div class="stat"><b>${zoneMin}</b><span>min en tu zona</span></div>`;
-  const goalCh = getCh().find(c => c.type === 'minutes'), goal = goalCh ? goalCh.target : 150;
+  const goalCh = getCh().find(c => c.type === 'minutes' && !isRange(c)), goal = goalCh ? goalCh.target : 150;
   $('chartGoal').textContent = `meta ${goal} min`;
   const weeks = Array.from({ length: 8 }, (_, i) => { const w = new Date(ws); w.setDate(w.getDate() - 7 * (7 - i)); return w; });
   const vals = weeks.map(minutesInWeek), max = Math.max(goal, ...vals) * 1.1;
@@ -984,50 +1039,98 @@ function renderProgress() {
         <text x="${x + bw / 2}" y="138" text-anchor="middle" fill="#8E9B96" font-size="10">${i === 7 ? 'Esta' : weeks[i].toLocaleDateString('es', { day: 'numeric', month: 'numeric' })}</text>`; }).join('') +
     `<line x1="8" x2="318" y1="${Y(goal)}" y2="${Y(goal)}" stroke="#F5B84A" stroke-dasharray="4 4"/>`;
   const last4 = Array.from({ length: 4 }, (_, i) => { const w = new Date(ws); w.setDate(w.getDate() - 7 * (3 - i)); return w; });
-  const chs = getCh();
-  $('chHistory').innerHTML = chs.length ? `<table class="tbl"><tr><th>Reto</th>${last4.map((w, i) => `<th>${i === 3 ? 'Esta' : w.toLocaleDateString('es', { day: 'numeric', month: 'short' })}</th>`).join('')}</tr>` +
-    chs.map(c => `<tr><td>${esc(c.name)}</td>${last4.map(w => { const p = Math.round(chProgress(c, w).pct * 100); return `<td style="color:${p >= 100 ? 'var(--neon)' : p >= 50 ? 'var(--amber)' : 'var(--sub)'};font-weight:700">${p} %</td>`; }).join('')}</tr>`).join('') + '</table>'
-    : '<span class="sub small">Sin retos todavía.</span>';
+  const weekly = getCh().filter(c => !isRange(c)), ranged = getCh().filter(isRange);
+  $('chHistory').innerHTML = (weekly.length ? `<table class="tbl"><tr><th>Reto semanal</th>${last4.map((w, i) => `<th>${i === 3 ? 'Esta' : fdate(w)}</th>`).join('')}</tr>` +
+    weekly.map(c => `<tr><td>${esc(c.name)}</td>${last4.map(w => { const p = Math.round(chProgress(c, w).pct * 100); return `<td style="color:${p >= 100 ? 'var(--neon)' : p >= 50 ? 'var(--amber)' : 'var(--sub)'};font-weight:700">${p} %</td>`; }).join('')}</tr>`).join('') + '</table>' : '') +
+    ranged.map(c => { const pr = chProgress(c); return `<div class="chrow" style="margin-top:12px"><div class="row between"><b>${esc(c.name)}</b><b style="color:var(--neon)">${Math.min(999, Math.round(pr.pct * 100))} %</b></div>${meter(pr.pct)}<span class="small sub">${periodText(c)} · ${pr.label} · ${pr.sub}</span></div>`; }).join('') ||
+    '<span class="sub small">Sin retos todavía.</span>';
   renderHistory();
 }
 function renderAll() { renderHome(); renderChallenges(); renderProgress(); }
-function chFormType() {
-  const t = $('chType').value;
-  $('chTargetLbl').textContent = t === 'minutes' ? 'Meta de minutos por semana' : 'Meta de días por semana (1 a 7)';
-  $('chTarget').max = t === 'minutes' ? 3000 : 7;
-  if (t !== 'minutes' && +$('chTarget').value > 7) $('chTarget').value = 7;
+
+/* formulario de retos (crear y editar) */
+let editingId = null;
+function setOpt(attr, val) { document.querySelectorAll(`[data-${attr}]`).forEach(b => { if (b.closest('#chForm')) b.setAttribute('aria-pressed', String(b.dataset[attr] === val)); }); }
+function chFormSync() {
+  const t = $('chType').value, range = $('chForm').dataset.period === 'range';
+  setOpt('type', t); setOpt('period', range ? 'range' : 'weekly');
+  $('rangeBox').classList.toggle('hidden', !range);
+  let nDays = 7;
+  if (range && $('chFrom').value && $('chTo').value && $('chTo').value >= $('chFrom').value) {
+    nDays = daysBetween($('chFrom').value, $('chTo').value).length;
+    $('rangeInfo').textContent = `${nDays} días: del ${fdate(kdate($('chFrom').value))} al ${fdate(kdate($('chTo').value))}.`;
+  } else if (range) $('rangeInfo').textContent = 'Elegí un atajo o las fechas de inicio y fin.';
+  $('chTargetLbl').textContent = t === 'minutes' ? (range ? 'Meta de minutos en todo el período' : 'Meta de minutos por semana') : `Meta de días (de ${nDays})`;
+  $('chTarget').max = t === 'minutes' ? 20000 : nDays;
+  if (t !== 'minutes' && (+$('chTarget').value > nDays || $('chForm').dataset.autoDays)) { $('chTarget').value = nDays; $('chForm').dataset.autoDays = '1'; }
 }
-function openChForm(tpl) {
+function preset(p) {
+  const now = new Date(); let a = new Date(now), b = new Date(now);
+  if (p === '7') b.setDate(b.getDate() + 6);
+  else if (p === '30') b.setDate(b.getDate() + 29);
+  else if (p === 'month') { a = new Date(now.getFullYear(), now.getMonth(), 1); b = new Date(now.getFullYear(), now.getMonth() + 1, 0); }
+  else if (p === 'next') { a = new Date(now.getFullYear(), now.getMonth() + 1, 1); b = new Date(now.getFullYear(), now.getMonth() + 2, 0); }
+  $('chFrom').value = dkey(a); $('chTo').value = dkey(b); chFormSync();
+}
+function openChForm(tpl, editId) {
+  editingId = editId || null;
+  const c = editId ? getCh().find(x => x.id === editId) : null;
+  const t = c || (tpl ? TPL[tpl] : { name: '', type: 'minutes', target: 300 });
   $('chForm').classList.remove('hidden'); $('btnNewCh').classList.add('hidden');
-  const t = tpl ? TPL[tpl] : { name: '', type: 'minutes', target: 300 };
-  $('chName').value = t.name; $('chType').value = t.type; $('chTarget').value = t.target; chFormType();
+  $('chFormTitle').textContent = c ? 'Editar reto' : 'Nuevo reto';
+  $('chTpls').classList.toggle('hidden', !!c);
+  $('chSave').textContent = c ? 'Guardar cambios' : 'Crear reto';
+  $('chName').value = t.name; $('chType').value = t.type; $('chTarget').value = t.target;
+  delete $('chForm').dataset.autoDays;
+  if (t.type !== 'minutes' && (!c || c.target === chWindow(c).days.length)) $('chForm').dataset.autoDays = '1';
+  const per = (c && c.period) || $('chForm').dataset.keepPeriod && null;
+  $('chForm').dataset.period = per && per.mode === 'range' ? 'range' : ($('chForm').dataset.period === 'range' && !c ? 'range' : 'weekly');
+  if (per && per.mode === 'range') { $('chFrom').value = per.from; $('chTo').value = per.to; }
+  else if (!$('chFrom').value) preset('7');
+  chFormSync();
+  $('chForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-function closeChForm() { $('chForm').classList.add('hidden'); $('btnNewCh').classList.remove('hidden'); }
+function closeChForm() { $('chForm').classList.add('hidden'); $('btnNewCh').classList.remove('hidden'); editingId = null; }
 function saveChForm() {
-  const name = $('chName').value.trim(), type = $('chType').value;
-  let target = parseInt($('chTarget').value, 10);
+  const name = $('chName').value.trim(), type = $('chType').value, range = $('chForm').dataset.period === 'range';
   if (!name) { $('chName').focus(); $('chName').placeholder = 'Escribí un nombre para el reto'; return; }
-  if (!(target > 0)) target = type === 'minutes' ? 150 : 7;
-  if (type !== 'minutes') target = Math.min(7, target);
-  const c = getCh(); c.push({ id: 'c' + Date.now().toString(36), name, type, target }); store.set('challenges', c);
-  closeChForm(); renderAll();
+  let period = { mode: 'weekly' };
+  if (range) {
+    const f = $('chFrom').value, t = $('chTo').value;
+    if (!f || !t || t < f) { $('rangeInfo').innerHTML = '<span style="color:var(--coral)">Revisá las fechas: el fin tiene que ser igual o posterior al inicio.</span>'; return; }
+    period = { mode: 'range', from: f, to: t };
+  }
+  let target = parseInt($('chTarget').value, 10);
+  const maxDays = range ? daysBetween(period.from, period.to).length : 7;
+  if (!(target > 0)) target = type === 'minutes' ? 150 : maxDays;
+  if (type !== 'minutes') target = Math.min(maxDays, target);
+  const list = getCh();
+  if (editingId) { const c = list.find(x => x.id === editingId); Object.assign(c, { name, type, target, period }); }
+  else list.push({ id: 'c' + Date.now().toString(36), name, type, target, period });
+  store.set('challenges', list); closeChForm(); renderAll();
 }
 document.addEventListener('click', (e) => {
-  const t = e.target.closest('[data-today],[data-day],[data-addmin],[data-del],[data-tpl],[data-go]');
+  const t = e.target.closest('[data-today],[data-day],[data-addmin],[data-del],[data-edit],[data-tpl],[data-go],[data-type],[data-period],[data-preset]');
   if (!t) return;
   if (t.dataset.go) { show(t.dataset.go); if (t.dataset.new) openChForm(); return; }
   if (t.dataset.today) { const c = getCh().find(x => x.id === t.dataset.today); if (c) cycle(c, new Date()); return; }
-  if (t.dataset.day) { const [id, k] = t.dataset.day.split('|'); const c = getCh().find(x => x.id === id); if (c) cycle(c, new Date(k + 'T12:00')); return; }
+  if (t.dataset.day) { const [id, k] = t.dataset.day.split('|'); const c = getCh().find(x => x.id === id); if (c) cycle(c, kdate(k)); return; }
   if (t.dataset.addmin) { const inp = $('man-' + t.dataset.addmin), v = parseInt(inp.value, 10);
     if (v > 0 && v <= 600) { const m = getManual(); m.push({ date: dkey(new Date()), min: v }); store.set('manual', m); renderAll(); } else inp.focus(); return; }
   if (t.dataset.del) { if (!t.dataset.armed) { t.dataset.armed = '1'; t.textContent = 'Tocá de nuevo para eliminar'; t.style.color = 'var(--coral)'; setTimeout(() => renderChallenges(), 4000); return; }
     store.set('challenges', getCh().filter(x => x.id !== t.dataset.del)); renderAll(); return; }
-  if (t.dataset.tpl) { openChForm(t.dataset.tpl); return; }
+  if (t.dataset.edit) { openChForm(null, t.dataset.edit); return; }
+  if (t.dataset.tpl) { const keep = $('chForm').dataset.period; openChForm(t.dataset.tpl); $('chForm').dataset.period = keep || 'weekly'; chFormSync(); return; }
+  if (t.dataset.type) { $('chType').value = t.dataset.type; if (t.dataset.type !== 'minutes') $('chForm').dataset.autoDays = '1'; chFormSync(); return; }
+  if (t.dataset.period) { $('chForm').dataset.period = t.dataset.period; if (t.dataset.period === 'range' && !$('chFrom').value) preset('7'); chFormSync(); return; }
+  if (t.dataset.preset) { preset(t.dataset.preset); return; }
 });
 $('btnNewCh').onclick = () => openChForm();
 $('chCancel').onclick = closeChForm;
 $('chSave').onclick = saveChForm;
-$('chType').onchange = chFormType;
+['chFrom', 'chTo'].forEach(id => $(id).addEventListener('change', () => { delete $('chForm').dataset.autoDays; chFormSync(); }));
+$('chTarget').addEventListener('input', () => { delete $('chForm').dataset.autoDays; });
+
 function saveProfile() {
   const p = store.get('profile', {}) || {};
   ['userName', 'age', 'weight', 'rest', 'sex', 'medLimit', 'activity', 'duration', 'reportEvery'].forEach(k => { p[k] = $(k).value; });
