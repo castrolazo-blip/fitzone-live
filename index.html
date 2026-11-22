@@ -267,7 +267,7 @@ const mmss = (s) => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padSta
 /* ---------- parámetros del motor (Documento Maestro, sección 04) ---------- */
 const P = {
   staleMs: 5000, lostMs: 10000, emaAlpha: 0.33, hyst: 3,
-  persistLow: 30, persistHigh: 15, effortCooldown: 45, sameMsgCooldown: 90,
+  lowWindow: 40, lowNeeded: 30, highWindow: 20, highNeeded: 15, effortCooldown: 45, sameMsgCooldown: 90,
   praiseEvery: 270, safetyMargin: 10, safetyConsecutive: 2,
 };
 
@@ -279,7 +279,7 @@ const S = {
   mode: 'moderada',
   running: false, paused: false,
   elapsed: 0, lastTick: 0, timer: null,
-  ema: null, zoneState: null, candidate: null, candidateSince: 0, overCount: 0,
+  ema: null, zoneState: null, candidate: null, candidateSince: 0, overCount: 0, recent: [], said: {},
   lastMsgAt: -1e9, lastMsgText: '', lastMsgTextAt: {}, lastPraise: 0, conn: 'none',
   secs: { low: 0, zone: 0, high: 0, nosignal: 0 }, kcal: 0, hrSum: 0, hrN: 0,
   samples: [], rpe: null, muted: false, endAnnounced: false, wakeLock: null, demoTimer: null,
@@ -343,20 +343,24 @@ function say(text, priority = 'effort') {
   u.lang = voice ? voice.lang : 'es-MX'; if (voice) u.voice = voice; u.rate = 1.0;
   speechSynthesis.speak(u);
 }
-function effortMsg(text) {
+function effortMsg(text, key = text) {
   const now = S.elapsed;
   if (now - S.lastMsgAt < P.effortCooldown) return false;
-  if (S.lastMsgTextAt[text] !== undefined && now - S.lastMsgTextAt[text] < P.sameMsgCooldown) return false;
-  S.lastMsgAt = now; S.lastMsgTextAt[text] = now; say(text, 'effort'); return true;
+  if (S.lastMsgTextAt[key] !== undefined && now - S.lastMsgTextAt[key] < P.sameMsgCooldown) return false;
+  S.lastMsgAt = now; S.lastMsgTextAt[key] = now; say(text, 'effort'); return true;
 }
 const T = (vos, tu) => profile().voseo ? vos : tu;
-function msgUp() {
-  const a = $('activity').value;
-  if (a === 'bici') return T('Si te sentís bien, podés subir un poco la resistencia o la cadencia.', 'Si te sientes bien, puedes subir un poco la resistencia o la cadencia.');
-  return T('Si te sentís bien, podés aumentar ligeramente el paso.', 'Si te sientes bien, puedes aumentar ligeramente el paso.');
+function msgUp(bpm) {
+  const a = $('activity').value, head = `Estás en ${bpm}, debajo de tu zona de ${S.z.low}. `;
+  if (profile().prudent) return head + T('Seguí a un ritmo cómodo; caminar suave también suma.', 'Sigue a un ritmo cómodo; caminar suave también suma.');
+  if (a === 'bici') return head + T('Si te sentís bien, podés subir un poco la resistencia o la cadencia.', 'Si te sientes bien, puedes subir un poco la resistencia o la cadencia.');
+  return head + T('Si te sentís bien, podés aumentar ligeramente el paso.', 'Si te sientes bien, puedes aumentar ligeramente el paso.');
 }
-function msgDown() {
-  const a = $('activity').value;
+function msgDown(bpm) {
+  const a = $('activity').value, head = `Estás en ${bpm}, arriba de tu zona. `;
+  return head + msgDownBase(a);
+}
+function msgDownBase(a) {
   if (a === 'bici') return T('Reducí un poco la resistencia o la cadencia.', 'Reduce un poco la resistencia o la cadencia.');
   if (a === 'trote') return T('Pasá a caminar para recuperar.', 'Pasa a caminar para recuperar.');
   return T('Bajá un poco el ritmo y caminá suavemente.', 'Baja un poco el ritmo y camina suavemente.');
@@ -446,7 +450,7 @@ async function startSession() {
   const p = profile();
   store.set('profile', { age: $('age').value, weight: $('weight').value, rest: $('rest').value, sex: $('sex').value,
     prudent: p.prudent, medLimit: $('medLimit').value, voseo: p.voseo, mode: S.mode, activity: $('activity').value, duration: $('duration').value });
-  Object.assign(S, { running: true, paused: false, elapsed: 0, ema: null, zoneState: null, candidate: null, candidateSince: 0, overCount: 0,
+  Object.assign(S, { running: true, paused: false, elapsed: 0, ema: null, zoneState: null, candidate: null, candidateSince: 0, overCount: 0, recent: [], said: {},
     lastMsgAt: -1e9, lastMsgTextAt: {}, lastPraise: 0, conn: 'none', secs: { low: 0, zone: 0, high: 0, nosignal: 0 }, kcal: 0, hrSum: 0, hrN: 0,
     samples: [], rpe: null, endAnnounced: false, z: zone(), plan: Math.max(5, parseInt($('duration').value) || 40) * 60, startedAt: new Date() });
   S.warm = Math.min(300, S.plan * 0.15); S.cool = Math.min(300, S.plan * 0.15);
@@ -509,14 +513,16 @@ function tick() {
     else cls = (f >= z.low && f <= z.high) ? 'zone' : f < z.low ? 'low' : 'high';
     if (cls !== S.candidate) { S.candidate = cls; S.candidateSince = S.elapsed; }
     S.zoneState = cls;
-    if (!S.paused) S.secs[cls]++;
+    if (!S.paused) { S.secs[cls]++; S.recent.push(cls); if (S.recent.length > P.lowWindow) S.recent.shift(); }
+    const count = (c, n) => S.recent.slice(-n).filter(x => x === c).length;
 
     if (!S.paused && S.mode !== 'libre' && ph === 'main' && S.overCount < P.safetyConsecutive) {
       const held = S.elapsed - S.candidateSince;
-      if (cls === 'high' && held >= P.persistHigh) effortMsg(msgDown());
-      if (cls === 'low' && held >= P.persistLow && !p.prudent) effortMsg(msgUp());
+      if (cls === 'high' && count('high', P.highWindow) >= P.highNeeded) effortMsg(msgDown(bpm), 'down');
+      if (cls === 'low' && count('low', P.lowWindow) >= P.lowNeeded) effortMsg(msgUp(bpm), 'up');
       if (cls === 'zone' && S.elapsed - S.lastPraise >= P.praiseEvery && held >= 20) {
-        if (effortMsg(T(`Muy bien. Estás en ${bpm}, en tu zona. Mantené este ritmo.`, `Muy bien. Estás en ${bpm}, en tu zona. Mantén este ritmo.`))) S.lastPraise = S.elapsed;
+        const n = bpm >= z.low && bpm <= z.high ? `Estás en ${bpm}, en tu zona.` : 'Estás en tu zona.';
+        if (effortMsg(T(`Muy bien. ${n} Mantené este ritmo.`, `Muy bien. ${n} Mantén este ritmo.`), 'praise')) S.lastPraise = S.elapsed;
       }
     }
   } else if (!S.paused && S.running) {
@@ -531,8 +537,8 @@ function tick() {
 
   // fases
   if (!S.paused) {
-    if (Math.floor(S.elapsed) === Math.floor(S.warm) && S.warm > 0 && S.mode !== 'libre') effortMsg('Terminó el calentamiento. ' + (sig === 'fresh' ? `Tu zona es de ${z.low} a ${z.high}.` : 'Ahora un ritmo cómodo y constante.'));
-    if (Math.floor(S.elapsed) === Math.floor(S.plan - S.cool)) { S.lastMsgAt = -1e9; effortMsg(T('Empezamos el enfriamiento. Bajá el ritmo de a poco.', 'Empezamos el enfriamiento. Baja el ritmo poco a poco.')); }
+    if (S.elapsed >= S.warm && !S.said.warm && S.warm > 0 && S.mode !== 'libre' && (S.said.warm = true)) say('Terminó el calentamiento. ' + (sig === 'fresh' ? `Tu zona es de ${z.low} a ${z.high}.` : 'Ahora un ritmo cómodo y constante.'), 'conn');
+    if (S.elapsed >= S.plan - S.cool && !S.said.cool && (S.said.cool = true)) { S.lastMsgAt = S.elapsed; say(T('Empezamos el enfriamiento. Bajá el ritmo de a poco.', 'Empezamos el enfriamiento. Baja el ritmo poco a poco.'), 'conn'); }
     if (S.elapsed >= S.plan && !S.endAnnounced) { S.endAnnounced = true;
       say(T('Completaste el tiempo planificado. Podés finalizar cuando quieras.', 'Completaste el tiempo planificado. Puedes finalizar cuando quieras.'), 'conn'); }
   }
