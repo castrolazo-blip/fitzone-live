@@ -65,6 +65,35 @@ input:focus,select:focus{outline:2px solid var(--neon);outline-offset:1px}
 .big{width:86px;height:86px;border:0;border-radius:50%;background:linear-gradient(160deg,#4CF29C,#1FB863);box-shadow:0 0 30px rgba(61,235,143,.4);display:flex;align-items:center;justify-content:center}
 .overlay{position:fixed;inset:0;background:rgba(10,15,14,.97);z-index:10;padding:calc(env(safe-area-inset-top) + 40px) 22px 30px;display:flex;flex-direction:column;gap:16px;max-width:500px;margin:0 auto}
 .hist{display:flex;justify-content:space-between;padding:12px 14px;border-radius:14px;background:var(--bg);border:1px solid var(--line);font-size:14px}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-height:120px;padding:16px;border-radius:20px;background:var(--card);border:1px solid var(--line);color:var(--text);text-align:left}
+.tile b{font-size:18px}
+.tile span{font-size:13px;color:var(--sub);line-height:1.35}
+.tile:active{transform:scale(.98)}
+.tile-main{flex-direction:row;align-items:center;gap:16px;min-height:108px;border:0;background:linear-gradient(120deg,#4CF29C,#1FB863);color:#03140A;box-shadow:0 10px 28px rgba(61,235,143,.25)}
+.tile-main b{font-size:24px}
+.tile-main .tile-txt{display:flex;flex-direction:column;gap:4px;color:#03140A}
+.tile-main .tile-txt b{color:#03140A}
+.tile-main .tile-ico{color:#03140A}
+.tile-main .tile-txt span{color:#0B3A22;font-size:14px}
+.tile-ico{display:flex;align-items:center;justify-content:center;width:62px;height:62px;border-radius:18px;background:rgba(3,20,10,.12);flex-shrink:0}
+.topbar{display:flex;align-items:center;gap:8px}
+.topbar h2{font-size:22px;font-weight:800}
+.backbtn{width:44px;height:44px;border-radius:12px;border:1px solid var(--line2);background:var(--card);color:var(--text);font-size:26px;line-height:1}
+.meter{height:12px;border-radius:6px;background:#1F2826;overflow:hidden}
+.meter i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#4CF29C,#22C46C);transition:width .5s}
+.meter.done i{background:linear-gradient(90deg,#F5B84A,#3DEB8F)}
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.day{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;height:54px;border-radius:12px;border:1px solid var(--line2);background:var(--bg);color:var(--sub);font-size:11px;font-weight:700}
+.day b{font-size:16px;color:var(--text)}
+.day:disabled{opacity:.35}
+.day.today{border-color:var(--neon)}
+.todaybtn{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:64px;padding:0 16px;border-radius:16px;border:1px solid var(--line2);background:var(--bg);color:var(--text);font-weight:700;font-size:16px;text-align:left}
+.state{flex-shrink:0;padding:6px 12px;border-radius:999px;font-size:14px;font-weight:800}
+.chipbtn{height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line2);background:var(--bg);color:var(--text);font-size:13px;font-weight:700}
+.chrow{display:flex;flex-direction:column;gap:8px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th,.tbl td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:left;white-space:normal}
 </style>
 </head>
 <body>
@@ -78,8 +107,52 @@ input:focus,select:focus{outline:2px solid var(--neon);outline-offset:1px}
     <span id="sensorPill" class="pill"><span class="dot"></span><span id="sensorPillText">Sin sensor</span></span>
   </div>
 
-  <!-- ============ CONFIGURACIÓN ============ -->
-  <section id="setup" class="wrap" style="padding:0">
+  <!-- ============ INICIO ============ -->
+  <section id="home" class="wrap" style="padding:0">
+    <div>
+      <div id="homeDate" class="small sub"></div>
+      <h1 id="homeHello" style="font-size:28px;font-weight:800;letter-spacing:-.02em">Hola</h1>
+    </div>
+
+    <button class="tile tile-main" data-go="train">
+      <span class="tile-ico"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="14" cy="4" r="2"/><path d="M7 21l3-6 3 2v5M6 12l3-4 5 1 3 4M10 8l-1 6"/></svg></span>
+      <span class="tile-txt"><b>Entrenar</b><span>Conectá tu banda y empezá tu sesión</span></span>
+    </button>
+
+    <div class="grid2">
+      <button class="tile" data-go="challenges">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3DEB8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+        <b>Mis retos</b><span id="tileRetos">—</span>
+      </button>
+      <button class="tile" data-go="progress">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5AA9FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18M6 16v-5M11 16V6M16 16v-8M20 16v-3"/></svg>
+        <b>Mis avances</b><span id="tileAvances">—</span>
+      </button>
+      <button class="tile" data-go="profile">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F5B84A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
+        <b>Mi perfil</b><span id="tileProfile">—</span>
+      </button>
+      <button class="tile" data-go="challenges" data-new="1">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C3CDC9" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        <b>Nuevo reto</b><span>Cardio, funcional, dieta…</span>
+      </button>
+    </div>
+
+    <div id="todayCard" class="card">
+      <div class="row between"><div class="lbl">Hoy</div><span id="todayLbl" class="small sub"></span></div>
+      <div id="todayChecks" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <div class="card">
+      <div class="row between"><div class="lbl">Retos de la semana</div><span id="weekLbl" class="small sub"></span></div>
+      <div id="homeChallenges" style="display:flex;flex-direction:column;gap:14px"></div>
+    </div>
+    <p class="small sub" style="text-align:center">FIT ZONE no es un dispositivo médico.</p>
+  </section>
+
+  <!-- ============ ENTRENAR ============ -->
+  <section id="train" class="wrap hidden" style="padding:0">
+    <div class="topbar"><button class="backbtn" data-go="home" aria-label="Volver al inicio">‹</button><h2>Entrenar</h2></div>
 
     <div id="noBle" class="warn hidden">
       <strong style="color:var(--amber)">Este navegador no permite Bluetooth.</strong>
@@ -101,21 +174,7 @@ input:focus,select:focus{outline:2px solid var(--neon);outline-offset:1px}
     </div>
 
     <div class="card">
-      <div class="lbl">2 · Tu perfil</div>
-      <div class="grid2">
-        <label>Edad<input id="age" type="number" inputmode="numeric" min="14" max="90" value="45"></label>
-        <label>Peso (kg)<input id="weight" type="number" inputmode="decimal" min="35" max="250" placeholder="opcional"></label>
-        <label>FC en reposo<input id="rest" type="number" inputmode="numeric" min="35" max="110" placeholder="opcional"></label>
-        <label>Sexo (calorías)<select id="sex"><option value="">Prefiero no decir</option><option value="m">Hombre</option><option value="f">Mujer</option></select></label>
-      </div>
-      <label class="check"><input id="prudent" type="checkbox"><span>Tengo una condición de salud, tomo medicamentos para el corazón o la presión, o algún médico me indicó cuidado con el ejercicio <span class="sub" style="font-weight:400">(modo prudente)</span></span></label>
-      <label id="limitWrap" class="hidden">Límite máximo indicado por tu médico (lpm)<input id="medLimit" type="number" inputmode="numeric" min="80" max="200" placeholder="opcional"></label>
-      <label>Decirme mi pulso por voz<select id="reportEvery" class="reportEvery"><option value="0">Nunca</option><option value="30">Cada 30 segundos</option><option value="60" selected>Cada 1 minuto</option><option value="120">Cada 2 minutos</option><option value="300">Cada 5 minutos</option></select></label>
-      <label class="check"><input id="voseo" type="checkbox" checked> Voz con voseo (“mantené”, “podés”)</label>
-    </div>
-
-    <div class="card">
-      <div class="lbl">3 · Sesión</div>
+      <div class="lbl">2 · Sesión</div>
       <div class="seg" role="group" aria-label="Modalidad">
         <button data-mode="moderada" aria-pressed="true">Moderada</button>
         <button data-mode="dinamica" aria-pressed="false">Dinámica</button>
@@ -137,11 +196,76 @@ input:focus,select:focus{outline:2px solid var(--neon);outline-offset:1px}
     </div>
 
     <button id="btnStart" class="btn" disabled>Elegí una fuente de pulso</button>
-    <p class="small sub" style="text-align:center">Dejá la pantalla encendida durante la sesión. FIT ZONE no es un dispositivo médico.</p>
+    <p class="small sub" style="text-align:center">Dejá la pantalla encendida durante la sesión.</p>
+  </section>
 
+  <!-- ============ MI PERFIL ============ -->
+  <section id="profile" class="wrap hidden" style="padding:0">
+    <div class="topbar"><button class="backbtn" data-go="home" aria-label="Volver al inicio">‹</button><h2>Mi perfil</h2></div>
     <div class="card">
-      <div class="row between"><div class="lbl">Historial</div><button id="btnClearHist" class="link">Borrar</button></div>
+      <label>Tu nombre<input id="userName" type="text" autocomplete="given-name" placeholder="¿Cómo te llamo?"></label>
+      <div class="grid2">
+        <label>Edad<input id="age" type="number" inputmode="numeric" min="14" max="90" value="45"></label>
+        <label>Peso (kg)<input id="weight" type="number" inputmode="decimal" min="35" max="250" placeholder="opcional"></label>
+        <label>FC en reposo<input id="rest" type="number" inputmode="numeric" min="35" max="110" placeholder="opcional"></label>
+        <label>Sexo (calorías)<select id="sex"><option value="">Prefiero no decir</option><option value="m">Hombre</option><option value="f">Mujer</option></select></label>
+      </div>
+      <label class="check"><input id="prudent" type="checkbox"><span>Tengo una condición de salud, tomo medicamentos para el corazón o la presión, o algún médico me indicó cuidado con el ejercicio <span class="sub" style="font-weight:400">(modo prudente)</span></span></label>
+      <label id="limitWrap" class="hidden">Límite máximo indicado por tu médico (lpm)<input id="medLimit" type="number" inputmode="numeric" min="80" max="200" placeholder="opcional"></label>
+    </div>
+    <div class="card">
+      <div class="lbl">Entrenador de voz</div>
+      <label>Decirme mi pulso por voz<select id="reportEvery" class="reportEvery"><option value="0">Nunca</option><option value="30">Cada 30 segundos</option><option value="60" selected>Cada 1 minuto</option><option value="120">Cada 2 minutos</option><option value="300">Cada 5 minutos</option></select></label>
+      <label class="check"><input id="voseo" type="checkbox" checked> Voz con voseo (“mantené”, “podés”)</label>
+    </div>
+    <div id="profileZone" class="ok"></div>
+    <button class="btn" data-go="home">Guardar</button>
+  </section>
+
+  <!-- ============ MIS AVANCES ============ -->
+  <section id="progress" class="wrap hidden" style="padding:0">
+    <div class="topbar"><button class="backbtn" data-go="home" aria-label="Volver al inicio">‹</button><h2>Mis avances</h2></div>
+    <div class="grid3" id="progStats"></div>
+    <div class="card">
+      <div class="row between"><div class="lbl">Minutos activos por semana</div><span id="chartGoal" class="small sub"></span></div>
+      <svg id="weekChart" viewBox="0 0 320 150" style="width:100%;height:auto" role="img" aria-label="Minutos activos de las últimas 8 semanas"></svg>
+    </div>
+    <div class="card">
+      <div class="lbl">Retos · últimas 4 semanas</div>
+      <div id="chHistory" style="overflow-x:auto"></div>
+    </div>
+    <div class="card">
+      <div class="row between"><div class="lbl">Sesiones</div><button id="btnClearHist" class="link">Borrar</button></div>
       <div id="histList" class="sub small">Todavía no hay sesiones.</div>
+    </div>
+  </section>
+
+  <!-- ============ MIS RETOS ============ -->
+  <section id="challenges" class="wrap hidden" style="padding:0">
+    <div class="topbar"><button class="backbtn" data-go="home" aria-label="Volver al inicio">‹</button><h2>Mis retos</h2></div>
+    <p class="small sub">Semana del <span id="chWeek"></span>. Los retos se reinician cada lunes.</p>
+    <div id="chList" style="display:flex;flex-direction:column;gap:12px"></div>
+
+    <button id="btnNewCh" class="btn2">+ Nuevo reto</button>
+    <div id="chForm" class="card hidden">
+      <div class="lbl">Nuevo reto</div>
+      <div class="row" style="flex-wrap:wrap;gap:6px">
+        <button class="chipbtn" data-tpl="cardio">Cardio 300 min</button>
+        <button class="chipbtn" data-tpl="camina">Caminar 150 min</button>
+        <button class="chipbtn" data-tpl="funcional">Funcional diario</button>
+        <button class="chipbtn" data-tpl="dieta">Dieta al 100 %</button>
+        <button class="chipbtn" data-tpl="agua">Tomar 2 L de agua</button>
+      </div>
+      <label>Nombre del reto<input id="chName" type="text" maxlength="40" placeholder="Ej.: Cardio 300 min por semana"></label>
+      <label>Tipo
+        <select id="chType">
+          <option value="minutes">Minutos de ejercicio por semana</option>
+          <option value="daily">Hábito diario (cumplí / no)</option>
+          <option value="dailyp">Hábito diario con parcial (cumplí / parcial / no)</option>
+        </select>
+      </label>
+      <label><span id="chTargetLbl">Meta de minutos por semana</span><input id="chTarget" type="number" inputmode="numeric" min="1" value="300"></label>
+      <div class="grid2"><button id="chSave" class="btn" style="height:48px">Crear reto</button><button id="chCancel" class="btn2">Cancelar</button></div>
     </div>
   </section>
 
@@ -225,6 +349,7 @@ input:focus,select:focus{outline:2px solid var(--neon);outline-offset:1px}
       <svg id="sumChart" viewBox="0 0 320 110" style="width:100%;height:auto" role="img" aria-label="Gráfico de pulso de la sesión"></svg>
       <p class="small sub" id="sumNote"></p>
     </div>
+    <div id="sumCh" class="card"></div>
     <button id="btnCsv" class="btn2">Descargar datos (CSV)</button>
     <button id="btnBack" class="btn">Volver al inicio</button>
   </section>
@@ -463,8 +588,7 @@ function readyToStart() { $('btnStart').disabled = false; $('btnStart').textCont
 /* ---------- sesión ---------- */
 async function startSession() {
   const p = profile();
-  store.set('profile', { age: $('age').value, weight: $('weight').value, rest: $('rest').value, sex: $('sex').value,
-    prudent: p.prudent, medLimit: $('medLimit').value, voseo: p.voseo, mode: S.mode, activity: $('activity').value, duration: $('duration').value, reportEvery: $('reportEvery').value });
+  saveProfile();
   Object.assign(S, { running: true, paused: false, elapsed: 0, ema: null, zoneState: null, candidate: null, candidateSince: 0, overCount: 0, recent: [], said: {},
     lastMsgAt: -1e9, lastMsgTextAt: {}, lastPraise: 0, conn: 'none', secs: { low: 0, zone: 0, high: 0, nosignal: 0 }, kcal: 0, hrSum: 0, hrN: 0,
     samples: [], rpe: null, endAnnounced: false, lastReport: 0, lastSpokeAt: -1e9, z: zone(), plan: Math.max(5, parseInt($('duration').value) || 40) * 60, startedAt: new Date() });
@@ -650,6 +774,12 @@ async function endSession() {
     kcal: S.kcal >= 5 ? [Math.round(S.kcal * 0.8), Math.round(S.kcal * 1.2)] : null, source: S.source === 'ble' ? (S.device && S.device.name) : S.source };
   const hist = store.get('history', []); hist.unshift(rec); store.set('history', hist.slice(0, 60));
   renderSummary(rec); renderHistory(); show('summary');
+  const mins = getCh().filter(c => c.type === 'minutes');
+  $('sumCh').classList.toggle('hidden', !mins.length);
+  $('sumCh').innerHTML = '<div class="lbl">Tus retos de minutos</div>' + mins.map(c => { const pr = chProgress(c);
+    return `<div class="chrow"><div class="row between"><b>${esc(c.name)}</b><b style="color:var(--neon)">${Math.min(999, Math.round(pr.pct * 100))} %</b></div>${meter(pr.pct)}<span class="small sub">${pr.label} · ${pr.sub}</span></div>`; }).join('');
+  if (mins[0]) { const v = minutesInWeek(weekStart()), c = mins[0];
+    setTimeout(() => say(v >= c.target ? `Cumpliste tu reto de ${c.target} minutos esta semana. ¡Excelente!` : `Llevás ${v} de ${c.target} minutos de tu reto semanal.`.replace('Llevás', T('Llevás', 'Llevas')), 'report'), 2500); }
 }
 
 /* ---------- resumen ---------- */
@@ -688,12 +818,18 @@ function renderHistory() {
   const h = store.get('history', []);
   if (!h.length) { $('histList').innerHTML = 'Todavía no hay sesiones.'; return; }
   const week = h.filter(r => Date.now() - new Date(r.date) < 7 * 864e5).reduce((a, r) => a + r.secs, 0);
-  $('histList').innerHTML = `<div class="ok" style="margin-bottom:8px">Últimos 7 días: <b style="color:var(--neon)">${Math.round(week / 60)} min activos</b> de 150 recomendados.</div>` +
+  $('histList').innerHTML = `<div class="ok" style="margin-bottom:8px">Últimos 7 días: <b style="color:var(--neon)">${Math.round(week / 60)} min activos</b> con FIT ZONE.</div>` +
     h.slice(0, 8).map(r => `<div class="hist" style="margin-bottom:6px"><span><b style="color:var(--text)">${r.activity}</b><br><span class="sub">${new Date(r.date).toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })} · ${mmss(r.zone)} en zona</span></span><b style="color:var(--text)">${Math.round(r.secs / 60)} min</b></div>`).join('');
 }
 
 /* ---------- navegación ---------- */
-function show(id) { ['setup', 'live', 'summary'].forEach(s => $(s).classList.toggle('hidden', s !== id)); window.scrollTo(0, 0); }
+function show(id) {
+  ['home', 'train', 'profile', 'progress', 'challenges', 'live', 'summary'].forEach(s => $(s).classList.toggle('hidden', s !== id));
+  if (['home', 'progress', 'challenges'].includes(id)) renderAll();
+  if (id === 'profile') renderProfileZone();
+  if (id === 'train') renderZone();
+  window.scrollTo(0, 0);
+}
 function openSymptom() { $('symptomOverlay').classList.remove('hidden'); $('symAsk').classList.remove('hidden'); $('symAlert').classList.add('hidden'); if (!S.paused) togglePause(); }
 function reportSymptom(s) {
   $('symAsk').classList.add('hidden'); $('symAlert').classList.remove('hidden');
@@ -701,17 +837,196 @@ function reportSymptom(s) {
   say(T('Detené la actividad. Sentate en un lugar seguro. Si el síntoma es fuerte o no mejora, llamá a emergencias.', 'Detén la actividad. Siéntate en un lugar seguro. Si el síntoma es fuerte o no mejora, llama a emergencias.'), 'safety');
 }
 
+/* ---------- retos y avances ---------- */
+const DAY = 864e5;
+const DOW = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+const dkey = (d) => { const x = new Date(d); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+function weekStart(d = new Date()) { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; }
+function weekDays(ws) { return Array.from({ length: 7 }, (_, i) => { const x = new Date(ws); x.setDate(x.getDate() + i); return x; }); }
+const TPL = {
+  cardio: { name: 'Cardio 300 min por semana', type: 'minutes', target: 300 },
+  camina: { name: 'Caminar 150 min por semana', type: 'minutes', target: 150 },
+  funcional: { name: 'Funcional diario', type: 'daily', target: 7 },
+  dieta: { name: 'Cumplo la dieta al 100 %', type: 'dailyp', target: 7 },
+  agua: { name: 'Tomar 2 L de agua', type: 'daily', target: 7 },
+};
+function getCh() {
+  let c = store.get('challenges', null);
+  if (!Array.isArray(c)) { c = ['cardio', 'funcional', 'dieta'].map(k => ({ id: k, ...TPL[k] })); store.set('challenges', c); }
+  return c;
+}
+const getChecks = () => store.get('checks', {}) || {};
+const getManual = () => store.get('manual', []) || [];
+function minutesInWeek(ws) {
+  const a = +ws, b = a + 7 * DAY;
+  const fromSessions = store.get('history', []).filter(r => { const t = +new Date(r.date); return t >= a && t < b; }).reduce((s, r) => s + r.secs / 60, 0);
+  const fromManual = getManual().filter(m => { const t = +new Date(m.date + 'T12:00'); return t >= a && t < b; }).reduce((s, m) => s + m.min, 0);
+  return Math.round(fromSessions + fromManual);
+}
+function chProgress(ch, ws = weekStart()) {
+  if (ch.type === 'minutes') {
+    const v = minutesInWeek(ws);
+    return { pct: v / ch.target, label: `${v} de ${ch.target} min`, sub: v >= ch.target ? '¡Reto cumplido!' : `Faltan ${ch.target - v} min` };
+  }
+  const marks = (getChecks()[ch.id]) || {}, days = weekDays(ws), today = dkey(new Date());
+  const sum = days.reduce((s, d) => s + (marks[dkey(d)] || 0), 0);
+  const elapsed = days.filter(d => dkey(d) <= today).length || 1;
+  const n = (x) => String(Math.round(x * 10) / 10).replace('.', ',');
+  const comp = Math.round(sum / Math.min(elapsed, 7) * 100);
+  return { pct: sum / ch.target, label: `${n(sum)} de ${ch.target} días`,
+    sub: ch.type === 'dailyp' ? `Cumplimiento ${comp} % en los días que van` : (sum >= ch.target ? '¡Reto cumplido!' : `${comp} % de los días que van`) };
+}
+function streak(ch) {
+  let n = 0, ws = weekStart(); ws.setDate(ws.getDate() - 7);
+  for (let i = 0; i < 52; i++) { if (chProgress(ch, ws).pct >= 1) { n++; ws.setDate(ws.getDate() - 7); } else break; }
+  return n;
+}
+function meter(pct) {
+  const w = Math.max(0, Math.min(100, Math.round(pct * 100)));
+  return `<div class="meter${pct >= 1 ? ' done' : ''}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${w}"><i style="width:${w}%"></i></div>`;
+}
+const esc = (t) => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const STATE = { 1: ['Cumplí', '#3DEB8F', 'rgba(61,235,143,.16)'], 0.5: ['Parcial', '#F5B84A', 'rgba(245,184,74,.16)'], 0: ['No', '#FF7A6B', 'rgba(255,122,107,.16)'] };
+function cycle(ch, day) {
+  const all = getChecks(); const m = all[ch.id] || (all[ch.id] = {}); const k = dkey(day); const cur = m[k];
+  const order = ch.type === 'dailyp' ? [undefined, 1, 0.5, 0] : [undefined, 1, 0];
+  const next = order[(order.indexOf(cur) + 1) % order.length];
+  if (next === undefined) delete m[k]; else m[k] = next;
+  store.set('checks', all); renderAll();
+}
+function renderHome() {
+  const p = profile(), name = ($('userName').value || '').trim();
+  const now = new Date();
+  $('homeDate').textContent = now.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' });
+  $('homeHello').textContent = name ? `Hola, ${name}` : 'Hola';
+  const chs = getCh(), ws = weekStart();
+  const done = chs.filter(c => chProgress(c).pct >= 1).length;
+  $('tileRetos').textContent = chs.length ? `${done} de ${chs.length} cumplidos esta semana` : 'Creá tu primer reto';
+  $('tileAvances').textContent = `${minutesInWeek(ws)} min activos esta semana`;
+  const z = zoneFor('moderada');
+  $('tileProfile').textContent = `${p.age} años · zona ${z.low}–${z.high}`;
+  $('weekLbl').textContent = 'Semana del ' + ws.toLocaleDateString('es', { day: 'numeric', month: 'short' });
+  // hoy
+  const daily = chs.filter(c => c.type !== 'minutes');
+  $('todayCard').classList.toggle('hidden', !daily.length);
+  $('todayLbl').textContent = 'Tocá para marcar';
+  const checks = getChecks(), tk = dkey(now);
+  $('todayChecks').innerHTML = daily.map(c => {
+    const v = (checks[c.id] || {})[tk]; const st = STATE[v];
+    return `<button class="todaybtn" data-today="${c.id}"><span>${esc(c.name)}</span><span class="state" style="${st ? `color:${st[1]};background:${st[2]}` : 'color:#A1AEA9;background:rgba(161,174,169,.14)'}">${st ? st[0] : 'Marcar'}</span></button>`;
+  }).join('');
+  $('homeChallenges').innerHTML = chs.length ? chs.map(c => { const pr = chProgress(c);
+    return `<div class="chrow"><div class="row between"><b style="font-size:15px">${esc(c.name)}</b><b style="color:${pr.pct >= 1 ? 'var(--amber)' : 'var(--neon)'}">${Math.min(999, Math.round(pr.pct * 100))} %</b></div>${meter(pr.pct)}<span class="small sub">${pr.label} · ${pr.sub}</span></div>`; }).join('')
+    : '<span class="sub small">Todavía no tenés retos.</span>';
+}
+function renderChallenges() {
+  const ws = weekStart(), days = weekDays(ws), tk = dkey(new Date()), checks = getChecks();
+  $('chWeek').textContent = ws.toLocaleDateString('es', { day: 'numeric', month: 'long' });
+  $('chList').innerHTML = getCh().map(c => {
+    const pr = chProgress(c), st = streak(c);
+    let body = '';
+    if (c.type === 'minutes') {
+      body = `<div class="row" style="gap:8px"><input id="man-${c.id}" type="number" inputmode="numeric" min="1" max="600" placeholder="Minutos extra" style="flex:1"><button class="btn2" data-addmin="${c.id}" style="width:auto;padding:0 16px">Agregar</button></div>
+        <span class="small sub">Tus sesiones de FIT ZONE se suman solas. Usá “Agregar” para ejercicio sin la app (clase, caminata sin banda).</span>`;
+    } else {
+      body = `<div class="days">${days.map((d, i) => { const k = dkey(d), v = (checks[c.id] || {})[k], s = STATE[v];
+        return `<button class="day${k === tk ? ' today' : ''}" data-day="${c.id}|${k}" ${k > tk ? 'disabled' : ''} aria-label="${d.toLocaleDateString('es', { weekday: 'long' })}: ${s ? s[0] : 'sin marcar'}" style="${s ? `border-color:${s[1]};background:${s[2]}` : ''}">${DOW[i]}<b style="${s ? `color:${s[1]}` : ''}">${v === 1 ? '✓' : v === 0.5 ? '½' : v === 0 ? '✗' : '·'}</b></button>`; }).join('')}</div>
+        <span class="small sub">Tocá un día para marcarlo: ${c.type === 'dailyp' ? 'cumplí → parcial → no → sin marcar' : 'cumplí → no → sin marcar'}.</span>`;
+    }
+    return `<div class="card" style="gap:10px">
+      <div class="row between" style="align-items:flex-start"><div><b style="font-size:17px">${esc(c.name)}</b><div class="small sub">${c.type === 'minutes' ? 'Minutos por semana' : c.type === 'dailyp' ? 'Hábito diario con parcial' : 'Hábito diario'}${st ? ` · racha ${st} semana${st > 1 ? 's' : ''}` : ''}</div></div>
+        <b style="font-size:22px;color:${pr.pct >= 1 ? 'var(--amber)' : 'var(--neon)'}">${Math.min(999, Math.round(pr.pct * 100))} %</b></div>
+      ${meter(pr.pct)}<div class="row between small"><span>${pr.label}</span><span class="sub">${pr.sub}</span></div>
+      ${body}
+      <button class="link" data-del="${c.id}" style="align-self:flex-start;color:var(--sub);padding:4px 0">Eliminar reto</button>
+    </div>`;
+  }).join('') || '<div class="card sub small">No tenés retos. Creá uno abajo.</div>';
+}
+function renderProgress() {
+  const ws = weekStart(), hist = store.get('history', []);
+  const wk = hist.filter(r => +new Date(r.date) >= +ws);
+  const zoneMin = Math.round(wk.reduce((s, r) => s + r.zone, 0) / 60);
+  $('progStats').innerHTML = `<div class="stat"><b>${minutesInWeek(ws)}</b><span>min esta semana</span></div><div class="stat"><b>${wk.length}</b><span>sesiones</span></div><div class="stat"><b>${zoneMin}</b><span>min en tu zona</span></div>`;
+  const goalCh = getCh().find(c => c.type === 'minutes'), goal = goalCh ? goalCh.target : 150;
+  $('chartGoal').textContent = `meta ${goal} min`;
+  const weeks = Array.from({ length: 8 }, (_, i) => { const w = new Date(ws); w.setDate(w.getDate() - 7 * (7 - i)); return w; });
+  const vals = weeks.map(minutesInWeek), max = Math.max(goal, ...vals) * 1.1;
+  const Y = (v) => 120 - v / max * 110, bw = 30;
+  $('weekChart').innerHTML = vals.map((v, i) => { const x = 14 + i * 38;
+      return `<rect x="${x}" y="${Y(v)}" width="${bw}" height="${120 - Y(v)}" rx="5" fill="${v >= goal ? '#3DEB8F' : '#2B3633'}"/>
+        <text x="${x + bw / 2}" y="${Math.max(10, Y(v) - 4)}" text-anchor="middle" fill="#C3CDC9" font-size="10">${v || ''}</text>
+        <text x="${x + bw / 2}" y="138" text-anchor="middle" fill="#8E9B96" font-size="10">${i === 7 ? 'Esta' : weeks[i].toLocaleDateString('es', { day: 'numeric', month: 'numeric' })}</text>`; }).join('') +
+    `<line x1="8" x2="318" y1="${Y(goal)}" y2="${Y(goal)}" stroke="#F5B84A" stroke-dasharray="4 4"/>`;
+  const last4 = Array.from({ length: 4 }, (_, i) => { const w = new Date(ws); w.setDate(w.getDate() - 7 * (3 - i)); return w; });
+  const chs = getCh();
+  $('chHistory').innerHTML = chs.length ? `<table class="tbl"><tr><th>Reto</th>${last4.map((w, i) => `<th>${i === 3 ? 'Esta' : w.toLocaleDateString('es', { day: 'numeric', month: 'short' })}</th>`).join('')}</tr>` +
+    chs.map(c => `<tr><td>${esc(c.name)}</td>${last4.map(w => { const p = Math.round(chProgress(c, w).pct * 100); return `<td style="color:${p >= 100 ? 'var(--neon)' : p >= 50 ? 'var(--amber)' : 'var(--sub)'};font-weight:700">${p} %</td>`; }).join('')}</tr>`).join('') + '</table>'
+    : '<span class="sub small">Sin retos todavía.</span>';
+  renderHistory();
+}
+function renderAll() { renderHome(); renderChallenges(); renderProgress(); }
+function chFormType() {
+  const t = $('chType').value;
+  $('chTargetLbl').textContent = t === 'minutes' ? 'Meta de minutos por semana' : 'Meta de días por semana (1 a 7)';
+  $('chTarget').max = t === 'minutes' ? 3000 : 7;
+  if (t !== 'minutes' && +$('chTarget').value > 7) $('chTarget').value = 7;
+}
+function openChForm(tpl) {
+  $('chForm').classList.remove('hidden'); $('btnNewCh').classList.add('hidden');
+  const t = tpl ? TPL[tpl] : { name: '', type: 'minutes', target: 300 };
+  $('chName').value = t.name; $('chType').value = t.type; $('chTarget').value = t.target; chFormType();
+}
+function closeChForm() { $('chForm').classList.add('hidden'); $('btnNewCh').classList.remove('hidden'); }
+function saveChForm() {
+  const name = $('chName').value.trim(), type = $('chType').value;
+  let target = parseInt($('chTarget').value, 10);
+  if (!name) { $('chName').focus(); $('chName').placeholder = 'Escribí un nombre para el reto'; return; }
+  if (!(target > 0)) target = type === 'minutes' ? 150 : 7;
+  if (type !== 'minutes') target = Math.min(7, target);
+  const c = getCh(); c.push({ id: 'c' + Date.now().toString(36), name, type, target }); store.set('challenges', c);
+  closeChForm(); renderAll();
+}
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-today],[data-day],[data-addmin],[data-del],[data-tpl],[data-go]');
+  if (!t) return;
+  if (t.dataset.go) { show(t.dataset.go); if (t.dataset.new) openChForm(); return; }
+  if (t.dataset.today) { const c = getCh().find(x => x.id === t.dataset.today); if (c) cycle(c, new Date()); return; }
+  if (t.dataset.day) { const [id, k] = t.dataset.day.split('|'); const c = getCh().find(x => x.id === id); if (c) cycle(c, new Date(k + 'T12:00')); return; }
+  if (t.dataset.addmin) { const inp = $('man-' + t.dataset.addmin), v = parseInt(inp.value, 10);
+    if (v > 0 && v <= 600) { const m = getManual(); m.push({ date: dkey(new Date()), min: v }); store.set('manual', m); renderAll(); } else inp.focus(); return; }
+  if (t.dataset.del) { if (!t.dataset.armed) { t.dataset.armed = '1'; t.textContent = 'Tocá de nuevo para eliminar'; t.style.color = 'var(--coral)'; setTimeout(() => renderChallenges(), 4000); return; }
+    store.set('challenges', getCh().filter(x => x.id !== t.dataset.del)); renderAll(); return; }
+  if (t.dataset.tpl) { openChForm(t.dataset.tpl); return; }
+});
+$('btnNewCh').onclick = () => openChForm();
+$('chCancel').onclick = closeChForm;
+$('chSave').onclick = saveChForm;
+$('chType').onchange = chFormType;
+function saveProfile() {
+  const p = store.get('profile', {}) || {};
+  ['userName', 'age', 'weight', 'rest', 'sex', 'medLimit', 'activity', 'duration', 'reportEvery'].forEach(k => { p[k] = $(k).value; });
+  p.prudent = $('prudent').checked; p.voseo = $('voseo').checked; p.mode = S.mode;
+  store.set('profile', p);
+}
+function zoneFor(m) { const keep = S.mode; S.mode = m; const z = zone(); S.mode = keep; return z; }
+function renderProfileZone() {
+  const z = zoneFor('moderada');
+  $('profileZone').innerHTML = `<b style="color:var(--neon);font-size:17px">Tu zona moderada: ${z.low}–${z.high} lpm</b><br>${z.method}. Límite de seguridad ${z.safety} lpm.`;
+}
+['userName', 'age', 'weight', 'rest', 'sex', 'medLimit', 'prudent', 'voseo', 'activity', 'duration'].forEach(id => $(id).addEventListener('change', () => { saveProfile(); renderProfileZone(); renderHome(); }));
+
 /* ---------- arranque ---------- */
 function restore() {
   const p = store.get('profile', null);
   if (p) {
-    ['age', 'weight', 'rest', 'sex', 'medLimit', 'activity', 'duration', 'reportEvery'].forEach(k => { if (p[k] !== undefined && p[k] !== null) $(k).value = p[k]; });
+    ['userName', 'age', 'weight', 'rest', 'sex', 'medLimit', 'activity', 'duration', 'reportEvery'].forEach(k => { if (p[k] !== undefined && p[k] !== null) $(k).value = p[k]; });
     $('prudent').checked = !!p.prudent; $('voseo').checked = p.voseo !== false;
     if (p.mode) S.mode = p.mode;
   }
   setMode(S.mode); renderHistory();
   syncReport($('reportEvery').value);
   document.querySelectorAll('.reportEvery').forEach(el => el.addEventListener('change', () => syncReport(el.value)));
+  renderProfileZone(); show('home');
   if (!navigator.bluetooth) $('noBle').classList.remove('hidden');
   if (window.self !== window.top) { $('btnCsv').classList.add('hidden'); $('telNote').classList.remove('hidden'); }
 }
@@ -730,7 +1045,7 @@ $('btnSymptom').onclick = openSymptom;
 document.querySelectorAll('[data-sym]').forEach(b => b.onclick = () => reportSymptom(b.dataset.sym));
 $('btnSymCancel').onclick = () => { $('symptomOverlay').classList.add('hidden'); if (S.paused) togglePause(); };
 $('btnSymDone').onclick = () => { $('symptomOverlay').classList.add('hidden'); endSession(); };
-$('btnBack').onclick = () => show('setup');
+$('btnBack').onclick = () => show('home');
 $('btnCsv').onclick = downloadCSV;
 $('btnClearHist').onclick = () => { const b = $('btnClearHist');
   if (b.dataset.armed) { store.set('history', []); renderHistory(); b.textContent = 'Borrar'; delete b.dataset.armed; }
