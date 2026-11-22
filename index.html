@@ -125,6 +125,14 @@ input[type="date"]{-webkit-appearance:none;appearance:none;min-height:46px}
 .tankinfo{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
 .tankinfo .tankbig{font-size:26px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.1}
 .kcal{color:var(--amber);font-weight:800}
+.bvals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.bval{display:flex;flex-direction:column;gap:2px;padding:12px 10px;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
+.bval small{font-size:11px;color:var(--sub);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.bval b{font-size:22px;font-variant-numeric:tabular-nums}
+.bval span{font-size:12px;font-weight:700}
+.brow{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr auto;gap:6px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.brow.head{color:var(--sub);font-size:11px;font-weight:700;text-transform:uppercase}
+.brow button{background:none;border:0;color:var(--sub);font-size:18px;padding:4px 6px}
 </style>
 </head>
 <body>
@@ -166,6 +174,15 @@ input[type="date"]{-webkit-appearance:none;appearance:none;min-height:46px}
       <button class="tile" data-go="challenges" data-new="1">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C3CDC9" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         <b>Nuevo reto</b><span>Cardio, funcional, dieta…</span>
+      </button>
+    </div>
+
+    <div class="card" id="bodyCard">
+      <div class="row between"><div class="lbl">Mi cuerpo</div><button class="link" data-go="body" style="padding:4px 0">Ver historial ›</button></div>
+      <div id="bodySummary"></div>
+      <button class="btn" id="btnBodyToday" style="height:58px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#03140A" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        Registrar hoy
       </button>
     </div>
 
@@ -281,6 +298,17 @@ input[type="date"]{-webkit-appearance:none;appearance:none;min-height:46px}
       <div class="row between"><div class="lbl">Sesiones</div><button id="btnClearHist" class="link">Borrar</button></div>
       <div id="histList" class="sub small">Todavía no hay sesiones.</div>
     </div>
+  </section>
+
+  <!-- ============ MI CUERPO ============ -->
+  <section id="body" class="wrap hidden" style="padding:0">
+    <div class="topbar"><button class="backbtn" data-go="home" aria-label="Volver al inicio">‹</button><h2>Mi cuerpo</h2></div>
+    <div class="grid3" id="bodyStats"></div>
+    <div class="card"><div class="lbl">Peso (kg)</div><svg id="chW" viewBox="0 0 320 140" style="width:100%;height:auto" role="img" aria-label="Evolución del peso"></svg></div>
+    <div class="card"><div class="lbl">Masa muscular (kg)</div><svg id="chM" viewBox="0 0 320 140" style="width:100%;height:auto" role="img" aria-label="Evolución de la masa muscular"></svg></div>
+    <div class="card"><div class="lbl">Grasa corporal (%)</div><svg id="chF" viewBox="0 0 320 140" style="width:100%;height:auto" role="img" aria-label="Evolución de la grasa corporal"></svg></div>
+    <button class="btn" id="btnBodyToday2" style="height:58px">+ Registrar hoy</button>
+    <div class="card"><div class="lbl">Registros</div><div id="bodyList" class="small"></div></div>
   </section>
 
   <!-- ============ MIS RETOS ============ -->
@@ -424,6 +452,22 @@ input[type="date"]{-webkit-appearance:none;appearance:none;min-height:46px}
     <button id="btnCsv" class="btn2">Descargar datos (CSV)</button>
     <button id="btnBack" class="btn">Volver al inicio</button>
   </section>
+</div>
+
+<!-- ============ REGISTRO DE CUERPO ============ -->
+<div id="bodySheet" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="bodyTitle" style="overflow-y:auto">
+  <h2 id="bodyTitle" style="font-size:24px">Registrar mi cuerpo</h2>
+  <div class="opts" style="grid-template-columns:repeat(2,minmax(0,1fr))" role="group" aria-label="Fecha">
+    <button class="opt" data-bdate="today"><b>Hoy</b><span id="bToday"></span></button>
+    <button class="opt" data-bdate="other"><b>Otra fecha</b><span>elegir día</span></button>
+  </div>
+  <label id="bDateWrap" class="hidden">Fecha<input id="bDate" type="date"></label>
+  <label>Peso (kg)<input id="bW" type="text" inputmode="decimal" placeholder="Ej.: 86,4" style="height:58px;font-size:22px;font-weight:700"></label>
+  <label>Masa muscular (kg)<input id="bM" type="text" inputmode="decimal" placeholder="Ej.: 32,5 (opcional)" style="height:58px;font-size:22px;font-weight:700"></label>
+  <label>Grasa corporal (%)<input id="bF" type="text" inputmode="decimal" placeholder="Ej.: 28,1 (opcional)" style="height:58px;font-size:22px;font-weight:700"></label>
+  <p id="bMsg" class="small sub">Tip: pesate a la misma hora, idealmente en ayunas, para comparar bien.</p>
+  <button id="bSave" class="btn" style="height:58px">Guardar</button>
+  <button id="bCancel" class="link" style="color:var(--sub)">Cancelar</button>
 </div>
 
 <!-- ============ REGISTRO DE TIEMPO Y CALORÍAS ============ -->
@@ -915,9 +959,10 @@ function renderHistory() {
 
 /* ---------- navegación ---------- */
 function show(id) {
-  ['home', 'train', 'profile', 'progress', 'challenges', 'live', 'summary'].forEach(s => $(s).classList.toggle('hidden', s !== id));
+  ['home', 'train', 'profile', 'progress', 'challenges', 'body', 'live', 'summary'].forEach(s => $(s).classList.toggle('hidden', s !== id));
   if (['home', 'progress', 'challenges'].includes(id)) renderAll();
   if (id === 'profile') renderProfileZone();
+  if (id === 'body') renderBodyScreen();
   if (id === 'train') { renderZone(); syncTrainUI(); }
   window.scrollTo(0, 0);
 }
@@ -1135,7 +1180,7 @@ function renderProgress() {
     '<span class="sub small">Sin retos todavía.</span>';
   renderHistory();
 }
-function renderAll() { renderHome(); renderChallenges(); renderProgress(); }
+function renderAll() { renderHome(); renderBodyCard(); renderChallenges(); renderProgress(); }
 
 /* formulario de retos (crear y editar) */
 let editingId = null;
@@ -1251,6 +1296,108 @@ document.querySelectorAll('.act').forEach(b => b.onclick = () => { $('activity')
 document.querySelectorAll('.dur').forEach(b => b.onclick = () => setDuration(+b.dataset.dur));
 $('durMinus').onclick = () => setDuration((parseInt($('duration').value, 10) || 40) - 5);
 $('durPlus').onclick = () => setDuration((parseInt($('duration').value, 10) || 40) + 5);
+
+
+/* ---------- mi cuerpo: peso, masa muscular, grasa ---------- */
+const getBody = () => (store.get('body', []) || []).slice().sort((a, b) => a.date < b.date ? -1 : 1);
+const num1 = (v) => { if (v === '' || v == null) return null; const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : null; };
+const f1 = (n) => n == null ? '—' : (Math.round(n * 10) / 10).toLocaleString('es', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+function delta(cur, prev, goodDown) {
+  if (cur == null || prev == null) return '';
+  const d = Math.round((cur - prev) * 10) / 10;
+  if (d === 0) return '<span class="sub">= sin cambio</span>';
+  const good = goodDown ? d < 0 : d > 0;
+  return `<span style="color:${good ? 'var(--neon)' : 'var(--amber)'}">${d > 0 ? '▲ +' : '▼ −'}${f1(Math.abs(d))}</span>`;
+}
+function lastOf(list, k) { for (let i = list.length - 1; i >= 0; i--) if (list[i][k] != null) return { v: list[i][k], i }; return null; }
+function prevOf(list, k, beforeIdx) { for (let i = beforeIdx - 1; i >= 0; i--) if (list[i][k] != null) return list[i][k]; return null; }
+function bodyVals(list, ref) {
+  const out = {};
+  [['weight', true], ['muscle', false], ['fat', true]].forEach(([k, down]) => {
+    const l = lastOf(list, k);
+    if (!l) { out[k] = { v: null, d: '' }; return; }
+    const base = ref === 'first' ? (list.find(e => e[k] != null) || {})[k] : prevOf(list, k, l.i);
+    out[k] = { v: l.v, d: ref === 'first' && base === l.v ? '' : delta(l.v, base, down) };
+  });
+  return out;
+}
+function sparkline(list, k, w = 320, h = 140, color = '#3DEB8F', unit = '') {
+  const pts = list.filter(e => e[k] != null);
+  if (pts.length < 2) return `<text x="${w / 2}" y="${h / 2}" text-anchor="middle" fill="#8E9B96" font-size="12">${pts.length ? 'Registrá otra fecha para ver la tendencia' : 'Sin registros todavía'}</text>`;
+  const vs = pts.map(e => e[k]), lo = Math.min(...vs), hi = Math.max(...vs), pad = (hi - lo) * 0.2 || 1;
+  const t0 = +kdate(pts[0].date), t1 = +kdate(pts[pts.length - 1].date) || t0 + 1;
+  const X = (d) => 34 + (+kdate(d) - t0) / Math.max(1, t1 - t0) * (w - 50), Y = (v) => 14 + (hi + pad - v) / (hi - lo + 2 * pad) * (h - 40);
+  const line = pts.map(e => `${X(e.date).toFixed(1)},${Y(e[k]).toFixed(1)}`).join(' ');
+  const last = pts[pts.length - 1];
+  return `<line x1="34" x2="${w - 10}" y1="${Y(hi)}" y2="${Y(hi)}" stroke="#1F2826"/><line x1="34" x2="${w - 10}" y1="${Y(lo)}" y2="${Y(lo)}" stroke="#1F2826"/>
+    <text x="0" y="${Y(hi) + 4}" fill="#8E9B96" font-size="10">${f1(hi)}</text><text x="0" y="${Y(lo) + 4}" fill="#8E9B96" font-size="10">${f1(lo)}</text>
+    <polyline points="${line}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round"/>
+    ${pts.map(e => `<circle cx="${X(e.date).toFixed(1)}" cy="${Y(e[k]).toFixed(1)}" r="3" fill="${color}"/>`).join('')}
+    <circle cx="${X(last.date)}" cy="${Y(last[k])}" r="5.5" fill="${color}" stroke="#0A0F0E" stroke-width="2"/>
+    <text x="34" y="${h - 4}" fill="#8E9B96" font-size="10">${fdate(kdate(pts[0].date))}</text><text x="${w - 10}" y="${h - 4}" text-anchor="end" fill="#8E9B96" font-size="10">${fdate(kdate(last.date))}</text>`;
+}
+function renderBodyCard() {
+  const list = getBody();
+  if (!list.length) { $('bodySummary').innerHTML = '<p class="small sub">Registrá tu peso, masa muscular y grasa corporal para ver tu evolución.</p>'; return; }
+  const v = bodyVals(list, 'prev'), lastDate = list[list.length - 1].date;
+  $('bodySummary').innerHTML = `<div class="bvals">
+      <div class="bval"><small>Peso</small><b>${f1(v.weight.v)}<span class="sub" style="font-size:12px"> kg</span></b>${v.weight.d}</div>
+      <div class="bval"><small>Músculo</small><b>${f1(v.muscle.v)}<span class="sub" style="font-size:12px"> kg</span></b>${v.muscle.d}</div>
+      <div class="bval"><small>Grasa</small><b>${f1(v.fat.v)}<span class="sub" style="font-size:12px"> %</span></b>${v.fat.d}</div>
+    </div>
+    <svg viewBox="0 0 320 90" style="width:100%;height:auto;margin-top:8px" role="img" aria-label="Tendencia del peso">${sparkline(list, 'weight', 320, 90)}</svg>
+    <p class="small sub">Último registro: ${kdate(lastDate).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}. Cambios contra el registro anterior.</p>`;
+}
+function renderBodyScreen() {
+  const list = getBody(), v = bodyVals(list, 'first');
+  $('bodyStats').innerHTML = `<div class="stat"><b>${f1(v.weight.v)}</b><span>kg</span>${v.weight.d ? `<span style="font-size:11px">${v.weight.d}</span>` : ''}</div>
+    <div class="stat"><b>${f1(v.muscle.v)}</b><span>kg músculo</span>${v.muscle.d ? `<span style="font-size:11px">${v.muscle.d}</span>` : ''}</div>
+    <div class="stat"><b>${f1(v.fat.v)}</b><span>% grasa</span>${v.fat.d ? `<span style="font-size:11px">${v.fat.d}</span>` : ''}</div>`;
+  $('chW').innerHTML = sparkline(list, 'weight', 320, 140, '#3DEB8F');
+  $('chM').innerHTML = sparkline(list, 'muscle', 320, 140, '#5AA9FF');
+  $('chF').innerHTML = sparkline(list, 'fat', 320, 140, '#F5B84A');
+  $('bodyList').innerHTML = list.length ? `<div class="brow head"><span>Fecha</span><span>Peso</span><span>Músculo</span><span>Grasa</span><span></span></div>` +
+    list.slice().reverse().map(e => `<div class="brow"><span>${kdate(e.date).toLocaleDateString('es', { day: 'numeric', month: 'short', year: '2-digit' })}</span><b>${f1(e.weight)}</b><span>${f1(e.muscle)}</span><span>${e.fat == null ? '—' : f1(e.fat) + ' %'}</span><button data-bdel="${e.date}" aria-label="Borrar registro del ${e.date}">✕</button></div>`).join('')
+    : '<span class="sub">Todavía no hay registros.</span>';
+}
+function openBodySheet() {
+  const list = getBody(), last = list[list.length - 1] || {};
+  $('bToday').textContent = new Date().toLocaleDateString('es', { day: 'numeric', month: 'short' });
+  $('bodySheet').dataset.when = 'today'; $('bDate').value = dkey(new Date()); $('bDateWrap').classList.add('hidden');
+  setOpt2('bdate', 'today');
+  $('bW').value = last.weight != null ? f1(last.weight) : (profile().weight ? f1(profile().weight) : '');
+  $('bM').value = last.muscle != null ? f1(last.muscle) : '';
+  $('bF').value = last.fat != null ? f1(last.fat) : '';
+  $('bMsg').textContent = 'Tip: pesate a la misma hora, idealmente en ayunas, para comparar bien.';
+  $('bodySheet').classList.remove('hidden');
+}
+function setOpt2(attr, val) { document.querySelectorAll(`#bodySheet [data-${attr}]`).forEach(b => b.setAttribute('aria-pressed', String(b.dataset[attr] === val))); }
+function saveBody() {
+  const date = $('bodySheet').dataset.when === 'today' ? dkey(new Date()) : $('bDate').value;
+  const weight = num1($('bW').value), muscle = num1($('bM').value), fat = num1($('bF').value);
+  const bad = (x, a, b) => x != null && (x < a || x > b);
+  if (!date || date > dkey(new Date())) { $('bMsg').innerHTML = '<span style="color:var(--coral)">Elegí una fecha de hoy o anterior.</span>'; return; }
+  if (weight == null && muscle == null && fat == null) { $('bMsg').innerHTML = '<span style="color:var(--coral)">Escribí al menos tu peso.</span>'; $('bW').focus(); return; }
+  if (bad(weight, 25, 350) || bad(muscle, 5, 150) || bad(fat, 2, 75)) { $('bMsg').innerHTML = '<span style="color:var(--coral)">Revisá los valores: peso 25–350 kg, músculo 5–150 kg, grasa 2–75 %.</span>'; return; }
+  const list = getBody().filter(e => e.date !== date);
+  list.push({ date, weight, muscle, fat });
+  list.sort((a, b) => a.date < b.date ? -1 : 1);
+  store.set('body', list);
+  const lw = lastOf(list, 'weight');
+  if (lw) { $('weight').value = Math.round(lw.v * 10) / 10; saveProfile(); }
+  $('bodySheet').classList.add('hidden'); renderAll();
+}
+$('btnBodyToday').onclick = openBodySheet;
+$('btnBodyToday2').onclick = openBodySheet;
+$('bSave').onclick = saveBody;
+$('bCancel').onclick = () => $('bodySheet').classList.add('hidden');
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-bdate],[data-bdel]');
+  if (!t) return;
+  if (t.dataset.bdate) { $('bodySheet').dataset.when = t.dataset.bdate; setOpt2('bdate', t.dataset.bdate); $('bDateWrap').classList.toggle('hidden', t.dataset.bdate === 'today'); if (t.dataset.bdate === 'other') $('bDate').max = dkey(new Date()); return; }
+  if (t.dataset.bdel) { if (!t.dataset.armed) { t.dataset.armed = '1'; t.textContent = '¿Borrar?'; t.style.color = 'var(--coral)'; t.style.fontSize = '12px'; setTimeout(renderBodyScreen, 4000); return; }
+    store.set('body', getBody().filter(x => x.date !== t.dataset.bdel)); renderAll(); renderBodyScreen(); }
+});
 
 /* ---------- arranque ---------- */
 function restore() {
