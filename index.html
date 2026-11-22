@@ -110,6 +110,7 @@ input:focus,select:focus{outline:2px solid var(--neon);outline-offset:1px}
       </div>
       <label class="check"><input id="prudent" type="checkbox"><span>Tengo una condición de salud, tomo medicamentos para el corazón o la presión, o algún médico me indicó cuidado con el ejercicio <span class="sub" style="font-weight:400">(modo prudente)</span></span></label>
       <label id="limitWrap" class="hidden">Límite máximo indicado por tu médico (lpm)<input id="medLimit" type="number" inputmode="numeric" min="80" max="200" placeholder="opcional"></label>
+      <label>Decirme mi pulso por voz<select id="reportEvery" class="reportEvery"><option value="0">Nunca</option><option value="30">Cada 30 segundos</option><option value="60" selected>Cada 1 minuto</option><option value="120">Cada 2 minutos</option><option value="300">Cada 5 minutos</option></select></label>
       <label class="check"><input id="voseo" type="checkbox" checked> Voz con voseo (“mantené”, “podés”)</label>
     </div>
 
@@ -185,6 +186,9 @@ input:focus,select:focus{outline:2px solid var(--neon);outline-offset:1px}
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3DEB8F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0"><path d="M11 5L6 9H2v6h4l5 4V5zM15.5 8.5a5 5 0 0 1 0 7"/></svg>
       <span id="lastVoice" class="sub">El entrenador te va a hablar cuando haga falta.</span>
     </div>
+
+    <label id="reportLive" class="row between" style="flex-direction:row;align-items:center">Pulso por voz
+      <select id="reportEveryLive" class="reportEvery" style="width:auto;height:40px"><option value="0">Nunca</option><option value="30">Cada 30 segundos</option><option value="60">Cada 1 minuto</option><option value="120">Cada 2 minutos</option><option value="300">Cada 5 minutos</option></select></label>
 
     <div class="ctl">
       <button id="btnMute" class="round" aria-label="Silenciar entrenador">
@@ -282,7 +286,7 @@ const S = {
   ema: null, zoneState: null, candidate: null, candidateSince: 0, overCount: 0, recent: [], said: {},
   lastMsgAt: -1e9, lastMsgText: '', lastMsgTextAt: {}, lastPraise: 0, conn: 'none',
   secs: { low: 0, zone: 0, high: 0, nosignal: 0 }, kcal: 0, hrSum: 0, hrN: 0,
-  samples: [], rpe: null, muted: false, endAnnounced: false, wakeLock: null, demoTimer: null,
+  samples: [], rpe: null, muted: false, endAnnounced: false, wakeLock: null, demoTimer: null, lastReport: 0, lastSpokeAt: -1e9,
 };
 
 /* ---------- perfil y zona ---------- */
@@ -334,6 +338,7 @@ function pickVoice() {
 }
 if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 function say(text, priority = 'effort') {
+  S.lastSpokeAt = S.elapsed;
   $('lastVoice').textContent = '“' + text + '”';
   $('lastVoice').classList.remove('sub');
   if (S.muted && priority !== 'safety') return;
@@ -346,8 +351,11 @@ function say(text, priority = 'effort') {
 function effortMsg(text, key = text) {
   const now = S.elapsed;
   if (now - S.lastMsgAt < P.effortCooldown) return false;
+  if (now - S.lastSpokeAt < 6) return false;
   if (S.lastMsgTextAt[key] !== undefined && now - S.lastMsgTextAt[key] < P.sameMsgCooldown) return false;
-  S.lastMsgAt = now; S.lastMsgTextAt[key] = now; say(text, 'effort'); return true;
+  S.lastMsgAt = now; S.lastMsgTextAt[key] = now; say(text, 'effort');
+  if (/\d/.test(text)) S.lastReport = now;
+  return true;
 }
 const T = (vos, tu) => profile().voseo ? vos : tu;
 function msgUp(bpm) {
@@ -364,6 +372,13 @@ function msgDownBase(a) {
   if (a === 'bici') return T('Reducí un poco la resistencia o la cadencia.', 'Reduce un poco la resistencia o la cadencia.');
   if (a === 'trote') return T('Pasá a caminar para recuperar.', 'Pasa a caminar para recuperar.');
   return T('Bajá un poco el ritmo y caminá suavemente.', 'Baja un poco el ritmo y camina suavemente.');
+}
+
+function reportEvery() { return parseInt($('reportEvery').value, 10) || 0; }
+function syncReport(v) {
+  document.querySelectorAll('.reportEvery').forEach(el => { el.value = v; });
+  const p = store.get('profile', {}) || {}; p.reportEvery = v; store.set('profile', p);
+  if (S.running) S.lastReport = S.elapsed;   // el nuevo intervalo cuenta desde ahora
 }
 
 /* ---------- fuentes de pulso ---------- */
@@ -449,13 +464,14 @@ function readyToStart() { $('btnStart').disabled = false; $('btnStart').textCont
 async function startSession() {
   const p = profile();
   store.set('profile', { age: $('age').value, weight: $('weight').value, rest: $('rest').value, sex: $('sex').value,
-    prudent: p.prudent, medLimit: $('medLimit').value, voseo: p.voseo, mode: S.mode, activity: $('activity').value, duration: $('duration').value });
+    prudent: p.prudent, medLimit: $('medLimit').value, voseo: p.voseo, mode: S.mode, activity: $('activity').value, duration: $('duration').value, reportEvery: $('reportEvery').value });
   Object.assign(S, { running: true, paused: false, elapsed: 0, ema: null, zoneState: null, candidate: null, candidateSince: 0, overCount: 0, recent: [], said: {},
     lastMsgAt: -1e9, lastMsgTextAt: {}, lastPraise: 0, conn: 'none', secs: { low: 0, zone: 0, high: 0, nosignal: 0 }, kcal: 0, hrSum: 0, hrN: 0,
-    samples: [], rpe: null, endAnnounced: false, z: zone(), plan: Math.max(5, parseInt($('duration').value) || 40) * 60, startedAt: new Date() });
+    samples: [], rpe: null, endAnnounced: false, lastReport: 0, lastSpokeAt: -1e9, z: zone(), plan: Math.max(5, parseInt($('duration').value) || 40) * 60, startedAt: new Date() });
   S.warm = Math.min(300, S.plan * 0.15); S.cool = Math.min(300, S.plan * 0.15);
   show('live');
   $('rpeBox').classList.toggle('hidden', S.source !== 'none');
+  $('reportLive').classList.toggle('hidden', S.source === 'none');
   $('barWrap').classList.toggle('hidden', S.source === 'none' || S.mode === 'libre');
   buildRPE();
   try { if ('wakeLock' in navigator) S.wakeLock = await navigator.wakeLock.request('screen'); } catch {}
@@ -542,6 +558,15 @@ function tick() {
     if (S.elapsed >= S.plan && !S.endAnnounced) { S.endAnnounced = true;
       say(T('Completaste el tiempo planificado. Podés finalizar cuando quieras.', 'Completaste el tiempo planificado. Puedes finalizar cuando quieras.'), 'conn'); }
   }
+  // pulso por voz cada N segundos (elegido por el usuario)
+  const every = reportEvery();
+  if (every && sig === 'fresh' && !S.paused && S.elapsed - S.lastReport >= every && S.elapsed - S.lastSpokeAt >= 8) {
+    S.lastReport = S.elapsed;
+    const st = S.mode === 'libre' || ph === 'warm' || ph === 'cool' ? '' :
+      S.overCount >= P.safetyConsecutive ? ', sobre tu límite' : S.last.bpm < z.low ? ', debajo de tu zona' : S.last.bpm > z.high ? ', arriba de tu zona' : ', en tu zona';
+    say(`Pulso ${S.last.bpm}${st}.`, 'report');
+  }
+
   render(sig, ph, cls);
 }
 function kcalPerMin(hr, p) {
@@ -680,11 +705,13 @@ function reportSymptom(s) {
 function restore() {
   const p = store.get('profile', null);
   if (p) {
-    ['age', 'weight', 'rest', 'sex', 'medLimit', 'activity', 'duration'].forEach(k => { if (p[k] !== undefined && p[k] !== null) $(k).value = p[k]; });
+    ['age', 'weight', 'rest', 'sex', 'medLimit', 'activity', 'duration', 'reportEvery'].forEach(k => { if (p[k] !== undefined && p[k] !== null) $(k).value = p[k]; });
     $('prudent').checked = !!p.prudent; $('voseo').checked = p.voseo !== false;
     if (p.mode) S.mode = p.mode;
   }
   setMode(S.mode); renderHistory();
+  syncReport($('reportEvery').value);
+  document.querySelectorAll('.reportEvery').forEach(el => el.addEventListener('change', () => syncReport(el.value)));
   if (!navigator.bluetooth) $('noBle').classList.remove('hidden');
   if (window.self !== window.top) { $('btnCsv').classList.add('hidden'); $('telNote').classList.remove('hidden'); }
 }
