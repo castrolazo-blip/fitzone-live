@@ -235,9 +235,10 @@ input[type="date"]{-webkit-appearance:none;appearance:none;min-height:46px}
         <button class="act" data-act="mascota" aria-pressed="false"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="4" r="2"/><path d="M6 21l1-6 2 2v4M5 11l2-3 3 1 4 3M14 12l3 0M17 12c2 0 3 1 3 3v1h-5l-1 5M15 16l-1 5"/></svg><b>Paseo con mascotas</b></button>
         <button class="act" data-act="bici" aria-pressed="false"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h3"/></svg><b>Bicicleta estática</b></button>
         <button class="act" data-act="eliptica" aria-pressed="false"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M6 8l6-3 6 3M6 16l6 3 6-3"/></svg><b>Elíptica</b></button>
+        <button class="act" data-act="funcional" aria-pressed="false"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12"/></svg><b>Funcional</b></button>
         <button class="act" data-act="trote" aria-pressed="false"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="15" cy="4" r="2"/><path d="M6 21l4-5 3 2 1 3M5 12l4-4 5 1 2 3 3 1M10 8l-1 6"/></svg><b>Trote suave</b></button>
       </div>
-      <select id="activity" class="hidden" aria-hidden="true" tabindex="-1"><option value="caminata">Caminata</option><option value="caminata_rapida" selected>Caminata rápida</option><option value="mascota">Paseo con mascotas</option><option value="bici">Bicicleta estática</option><option value="eliptica">Elíptica</option><option value="trote">Trote suave</option></select>
+      <select id="activity" class="hidden" aria-hidden="true" tabindex="-1"><option value="caminata">Caminata</option><option value="caminata_rapida" selected>Caminata rápida</option><option value="mascota">Paseo con mascotas</option><option value="bici">Bicicleta estática</option><option value="eliptica">Elíptica</option><option value="trote">Trote suave</option><option value="funcional">Entrenamiento funcional</option></select>
       <div class="lbl" style="margin-top:4px">Duración</div>
       <div class="durs">
         <button class="dur" data-dur="20">20<span>min</span></button>
@@ -745,6 +746,9 @@ function readyToStart() { $('btnStart').disabled = false; $('btnStart').textCont
 async function startSession() {
   const p = profile();
   saveProfile();
+  S.funcional = $('activity').value === 'funcional';
+  S.prevMode = S.mode;
+  if (S.funcional) S.mode = 'libre';        // en funcional el pulso sube y baja a propósito: solo medir y cuidar el límite
   Object.assign(S, { running: true, paused: false, elapsed: 0, ema: null, zoneState: null, candidate: null, candidateSince: 0, overCount: 0, recent: [], said: {},
     lastMsgAt: -1e9, lastMsgTextAt: {}, lastPraise: 0, conn: 'none', secs: { low: 0, zone: 0, high: 0, nosignal: 0 }, kcal: 0, hrSum: 0, hrN: 0,
     samples: [], rpe: null, endAnnounced: false, lastReport: 0, lastSpokeAt: -1e9, z: zone(), plan: Math.max(5, parseInt($('duration').value) || 40) * 60, startedAt: new Date() });
@@ -755,7 +759,8 @@ async function startSession() {
   $('barWrap').classList.toggle('hidden', S.source === 'none' || S.mode === 'libre');
   buildRPE();
   try { if ('wakeLock' in navigator) S.wakeLock = await navigator.wakeLock.request('screen'); } catch {}
-  say(S.source === 'none'
+  if (S.funcional) say(T('Empezamos tu entrenamiento funcional. Te digo tu pulso y te aviso si pasás tu límite.', 'Empezamos tu entrenamiento funcional. Te digo tu pulso y te aviso si pasas tu límite.'), 'conn');
+  else say(S.source === 'none'
     ? T('Empezamos con un calentamiento suave. Te voy a guiar por cómo te sentís.', 'Empezamos con un calentamiento suave. Te voy a guiar por cómo te sientes.')
     : 'Empezamos con un calentamiento suave. ' + (S.mode === 'libre' ? '' : `Tu zona es de ${S.z.low} a ${S.z.high} pulsaciones.`), 'conn');
   S.lastTick = performance.now();
@@ -857,7 +862,7 @@ function kcalPerMin(hr, p) {
     const f = (-20.4022 + 0.4472 * hr - 0.1263 * w + 0.074 * p.age) / 4.184;
     return Math.max(0, p.sex === 'm' ? m : p.sex === 'f' ? f : (m + f) / 2);
   }
-  const met = { caminata: 3.3, mascota: 3.0, caminata_rapida: 4.3, bici: 5.0, eliptica: 5.0, trote: 7.0 }[$('activity').value] || 3.5;
+  const met = { funcional: 5.0, caminata: 3.3, mascota: 3.0, caminata_rapida: 4.3, bici: 5.0, eliptica: 5.0, trote: 7.0 }[$('activity').value] || 3.5;
   return met * 3.5 * w / 200 * (S.paused ? 0 : 1);
 }
 
@@ -925,11 +930,13 @@ async function endSession() {
   try { if (S.wakeLock) await S.wakeLock.release(); } catch {}
   say(T('Sesión completada. Muy buen trabajo.', 'Sesión completada. Muy buen trabajo.'), 'conn');
   const avg = S.hrN ? Math.round(S.hrSum / S.hrN) : null;
-  const rec = { date: S.startedAt.toISOString(), activity: $('activity').selectedOptions[0].textContent, mode: S.mode,
+  const rec = { date: S.startedAt.toISOString(), activity: $('activity').selectedOptions[0].textContent, act: $('activity').value, mode: S.mode,
     secs: Math.round(S.elapsed), zone: S.secs.zone, low: S.secs.low, high: S.secs.high, avg,
     kcal: S.kcal >= 5 ? [Math.round(S.kcal * 0.8), Math.round(S.kcal * 1.2)] : null, source: S.source === 'ble' ? (S.device && S.device.name) : S.source };
   const hist = store.get('history', []); hist.unshift(rec); store.set('history', hist.slice(0, 60));
+  const wasFunc = S.funcional; if (S.funcional) { S.mode = S.prevMode || 'moderada'; S.funcional = false; saveProfile(); }
   renderSummary(rec); renderHistory(); show('summary');
+  if (wasFunc) { creditFunctional(rec); return; }
   const mins = getCh().filter(c => c.type === 'minutes');
   $('sumCh').classList.toggle('hidden', !mins.length);
   $('sumCh').innerHTML = '<div class="lbl">Tu tanque de cardio</div>' + mins.map(c => { const pr = chProgress(c);
@@ -1021,13 +1028,14 @@ const getChecks = () => store.get('checks', {}) || {};
 const getManual = () => store.get('manual', []) || [];
 const getLogs = () => store.get('logs', {}) || {};
 const sessKcal = (r) => r.kcal ? Math.round((r.kcal[0] + r.kcal[1]) / 2) : 0;
+const isCardio = (r) => r.act !== 'funcional';
 function kcalBetween(a, b) {
-  const fromSessions = store.get('history', []).filter(r => { const t = +new Date(r.date); return t >= a && t < b; }).reduce((s, r) => s + sessKcal(r), 0);
+  const fromSessions = store.get('history', []).filter(r => { const t = +new Date(r.date); return isCardio(r) && t >= a && t < b; }).reduce((s, r) => s + sessKcal(r), 0);
   const fromManual = getManual().filter(m => { const t = +kdate(m.date); return t >= a && t < b; }).reduce((s, m) => s + (m.kcal || 0), 0);
   return Math.round(fromSessions + fromManual);
 }
-function minutesBetween(a, b) {   // [a, b) en milisegundos
-  const fromSessions = store.get('history', []).filter(r => { const t = +new Date(r.date); return t >= a && t < b; }).reduce((s, r) => s + r.secs / 60, 0);
+function minutesBetween(a, b) {   // [a, b) en milisegundos · solo cardio
+  const fromSessions = store.get('history', []).filter(r => { const t = +new Date(r.date); return isCardio(r) && t >= a && t < b; }).reduce((s, r) => s + r.secs / 60, 0);
   const fromManual = getManual().filter(m => { const t = +kdate(m.date); return t >= a && t < b; }).reduce((s, m) => s + m.min, 0);
   return Math.round(fromSessions + fromManual);
 }
@@ -1133,7 +1141,8 @@ function renderHome() {
   $('todayCard').classList.toggle('hidden', !daily.length);
   $('todayLbl').textContent = 'Tocá para marcar';
   const checks = getChecks(), tk = dkey(now);
-  $('todayChecks').innerHTML = daily.map(c => {
+  const funcStart = daily.filter(c => c.log).map(c => `<button class="btn" data-startfunc="${c.id}" style="height:52px"><svg width="18" height="18" viewBox="0 0 24 24" fill="#03140A" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>Iniciar ${esc(c.name.toLowerCase().startsWith('funcional') ? 'funcional' : c.name)} con la banda</button>`).join('');
+  $('todayChecks').innerHTML = funcStart + daily.map(c => {
     const v = (checks[c.id] || {})[tk]; const st = STATE[v];
     const lg = c.log && v === 1 ? (getLogs()[c.id] || {})[tk] : null;
     return `<button class="todaybtn" data-today="${c.id}"><span>${esc(c.name)}${lg ? `<br><span class="small sub" style="font-weight:600">${lg.min} min${lg.kcal ? ` · ${lg.kcal} kcal` : ''}</span>` : ''}</span><span class="state" style="${st ? `color:${st[1]};background:${st[2]}` : 'color:#A1AEA9;background:rgba(161,174,169,.14)'}">${st ? st[0] : 'Marcar'}</span></button>`;
@@ -1164,7 +1173,7 @@ function renderChallenges() {
       // 7 días: la semana actual, o en fechas fijas los últimos 7 días del período hasta hoy
       let days = isRange(c) ? w.days.filter(d => dkey(d) <= (tk < w.to ? tk : w.to)).slice(-7) : w.days;
       if (isRange(c) && days.length < 7) days = w.days.slice(0, 7);
-      body = `<div class="days">${days.map(d => { const k = dkey(d), v = (checks[c.id] || {})[k], s = STATE[v];
+      body = (c.log && activeToday(c) ? `<button class="btn" data-startfunc="${c.id}" style="height:52px"><svg width="18" height="18" viewBox="0 0 24 24" fill="#03140A" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>Iniciar funcional</button>` : '') + `<div class="days">${days.map(d => { const k = dkey(d), v = (checks[c.id] || {})[k], s = STATE[v];
         return `<button class="day${k === tk ? ' today' : ''}" data-day="${c.id}|${k}" ${k > tk ? 'disabled' : ''} aria-label="${d.toLocaleDateString('es', { weekday: 'long', day: 'numeric' })}: ${s ? s[0] : 'sin marcar'}" style="${s ? `border-color:${s[1]};background:${s[2]}` : ''}">${DOW[(d.getDay() + 6) % 7]}${isRange(c) ? `<span style="font-size:9px">${d.getDate()}</span>` : ''}<b style="${s ? `color:${s[1]}` : ''}">${v === 1 ? '✓' : v === 0.5 ? '½' : v === 0 ? '✗' : '·'}</b>${c.log && v === 1 && (getLogs()[c.id] || {})[k] ? `<span style="font-size:9px;color:var(--neon)">${(getLogs()[c.id] || {})[k].min}′</span>` : ''}</button>`; }).join('')}</div>
         <span class="small sub">Tocá un día para marcarlo: ${c.type === 'dailyp' ? 'cumplí → parcial → no → sin marcar' : 'cumplí → no → sin marcar'}.</span>`;
     }
@@ -1453,6 +1462,33 @@ document.addEventListener('click', (e) => {
   if (t.dataset.bdel) { if (!t.dataset.armed) { t.dataset.armed = '1'; t.textContent = '¿Borrar?'; t.style.color = 'var(--coral)'; t.style.fontSize = '12px'; setTimeout(renderBodyScreen, 4000); return; }
     store.set('body', getBody().filter(x => x.date !== t.dataset.bdel)); renderAll(); renderBodyScreen(); }
 });
+
+
+/* ---------- funcional medido con la banda ---------- */
+function startFunctional(chId) {
+  S.funcCh = chId;
+  $('activity').value = 'funcional'; syncTrainUI(); saveProfile();
+  show('train');
+}
+function creditFunctional(rec) {
+  const chs = getCh().filter(c => c.type !== 'minutes');
+  const ch = chs.find(c => c.id === S.funcCh) || chs.find(c => c.log) || null;
+  S.funcCh = null;
+  const min = Math.round(rec.secs / 60), kcal = sessKcal(rec);
+  if (!ch || min < 1) { $('sumCh').classList.add('hidden'); return; }
+  const k = dkey(new Date());
+  const all = getChecks(); (all[ch.id] || (all[ch.id] = {}))[k] = 1; store.set('checks', all);
+  const lg = getLogs(); const m = lg[ch.id] || (lg[ch.id] = {}); const prev = m[k] || { min: 0, kcal: 0 };
+  m[k] = { min: prev.min + min, kcal: (prev.kcal || 0) + kcal, src: 'banda' }; store.set('logs', lg);
+  const pr = chProgress(ch);
+  $('sumCh').classList.remove('hidden');
+  $('sumCh').innerHTML = `<div class="lbl">${esc(ch.name)}</div>
+    <div class="row" style="gap:12px;align-items:center"><span class="state" style="color:#3DEB8F;background:rgba(61,235,143,.16);font-size:15px">✓ Cumplí hoy</span>
+    <b>${m[k].min} min</b>${m[k].kcal ? `<span class="kcal">${m[k].kcal} kcal</span>` : ''}</div>
+    ${meter(pr.pct)}<span class="small sub">${periodText(ch)} · ${pr.label} · ${pr.sub}</span>`;
+  setTimeout(() => say(`Registré tu funcional: ${m[k].min} minutos${m[k].kcal ? ` y ${m[k].kcal} calorías` : ''}.`, 'report'), 2500);
+}
+document.addEventListener('click', (e) => { const t = e.target.closest('[data-startfunc]'); if (t) startFunctional(t.dataset.startfunc); });
 
 /* ---------- arranque ---------- */
 function restore() {
