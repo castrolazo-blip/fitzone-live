@@ -212,6 +212,8 @@ input[type="date"]{-webkit-appearance:none;appearance:none;min-height:46px}
       En iPhone, abrí esta página en la app gratuita <strong>Bluefy – Web BLE Browser</strong> (App Store). En Android o computadora, usá Chrome. Mientras tanto podés probar con el <strong>sensor de demostración</strong>.
     </div>
 
+    <div id="bleHelp" class="warn hidden"></div>
+
     <div class="card">
       <div class="lbl">1 · Fuente de pulso</div>
       <button id="btnConnect" class="btn">
@@ -678,6 +680,7 @@ function updateHomeSensor() {
   if (!$('homeSensor')) return;
   const on = bleConnected(), fresh = S.last && S.last.bpm && performance.now() - S.last.t < 10000;
   $('hsTitle').textContent = on ? (S.device.name || 'Banda conectada') : S.source === 'demo' ? 'Sensor de demostración' : 'Banda sin conectar';
+  if (!on && S.bleErr && S.source !== 'demo') { $('hsBtn').classList.remove('hidden'); return; }
   $('hsSub').textContent = on ? (fresh ? `Conectada · ${S.last.bpm} lpm` : 'Conectada · esperando pulso') : S.source === 'demo' ? 'Pulso simulado para practicar' : 'Ponete la Helio Strap y tocá Conectar';
   $('hsIco').style.color = on ? '#FF5A6E' : '#A1AEA9';
   $('hsBtn').classList.toggle('hidden', on);
@@ -705,7 +708,7 @@ function parseHR(dv) {
 async function connectBLE() {
   if (!navigator.bluetooth) { bleBlocked(); return; }
   try {
-    stopDemo();
+    stopDemo(); S.device = null; S.bleErr = false; $('bleHelp').classList.add('hidden');
     const device = await navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }], optionalServices: ['battery_service'] });
     S.device = device;
     device.addEventListener('gattserverdisconnected', onDisconnected);
@@ -715,8 +718,16 @@ async function connectBLE() {
     setSensor(device.name || 'Sensor', '#3DEB8F');
     readyToStart();
   } catch (e) {
-    if (e && e.name !== 'NotFoundError') { setSensor('Sin conexión', '#FF7A6B'); bleBlocked(e); }
+    const txt = errText(e);
+    const cancelled = (e && e.name === 'NotFoundError') || /cancel/i.test(txt);
+    setSensor(cancelled ? 'Sin sensor' : 'Sin conexión', cancelled ? '#A1AEA9' : '#FF7A6B');
+    bleBlocked(e, S.device ? 'connect' : (cancelled ? 'cancel' : 'scan'));
   }
+}
+function errText(e) {
+  if (!e) return '';
+  if (typeof e === 'string') return e;
+  return e.message || e.name || (e.toString && e.toString() !== '[object Object]' ? e.toString() : '') || '';
 }
 async function attach(device) {
   const server = await device.gatt.connect();
@@ -738,6 +749,7 @@ async function onDisconnected() {
   setSensor('Desconectado', '#FF7A6B');
 }
 function startDemo() {
+  S.bleErr = false; $('bleHelp').classList.add('hidden');
   stopDemo(); S.source = 'demo'; setSensor('Demostración', '#5AA9FF');
   let hr = 88, target = 118, t0 = Date.now();
   S.demoTimer = setInterval(() => {
@@ -756,10 +768,28 @@ function useNoSensor() {
   $('liveCheck').innerHTML = 'Te voy a guiar por <b>esfuerzo percibido</b>: tenés que poder hablar en frases completas.';
   readyToStart();
 }
-function bleBlocked(e) {
-  $('noBle').classList.remove('hidden');
-  if ($('hsSub')) { $('hsSub').innerHTML = navigator.bluetooth ? '<span style="color:var(--amber)">No se pudo conectar. Revisá que la banda esté puesta y cerca, cerrá Zepp y probá de nuevo.</span>' : '<span style="color:var(--amber)">Este navegador no permite Bluetooth: abrí la página en Bluefy.</span>'; }
-  if (e) $('noBle').insertAdjacentHTML('beforeend', '<br><span class="sub">Detalle: ' + String(e.message || e.name).replace(/</g, '&lt;') + '</span>');
+async function bleBlocked(e, stage) {
+  if (!navigator.bluetooth) {
+    $('noBle').classList.remove('hidden');
+    if ($('hsSub')) $('hsSub').innerHTML = '<span style="color:var(--amber)">Este navegador no permite Bluetooth: abrí la página en Bluefy.</span>';
+    return;
+  }
+  $('noBle').classList.add('hidden'); S.bleErr = true;
+  let btOff = false;
+  try { if (navigator.bluetooth.getAvailability) btOff = !(await navigator.bluetooth.getAvailability()); } catch {}
+  const head = btOff ? 'El Bluetooth del iPhone está apagado.' : stage === 'connect' ? 'Encontré la banda pero no pude conectarme.' : stage === 'cancel' ? 'No se eligió ninguna banda.' : 'No pude buscar la banda.';
+  const detail = errText(e);
+  $('bleHelp').innerHTML = `<strong style="color:var(--amber)">${head}</strong> Si la banda no apareció en la lista:
+    <ol style="margin:8px 0 0;padding-left:20px;line-height:1.5">
+      <li>Revisá que el <b>Bluetooth del iPhone esté encendido</b> (Centro de control o Ajustes › Bluetooth).</li>
+      <li>Ponete la banda ajustada contra la piel: solo transmite cuando mide.</li>
+      <li>Cerrá por completo <b>Zepp</b> y <b>nRF Connect</b>. Si otra app está conectada a la banda, no aparece en la lista.</li>
+      <li>En <b>Ajustes › Bluetooth</b>, si “Amazfit Helio Strap” dice Conectado, tocá la (i) › <b>Desconectar</b> (no “Olvidar”).</li>
+      <li>Volvé a tocar <b>Conectar banda o reloj</b> y elegí “Amazfit Helio Strap”.</li>
+      <li>Si sigue sin aparecer: apagá y prendé el Bluetooth y volvé a abrir Bluefy.</li>
+    </ol>${detail ? `<div class="sub" style="margin-top:6px">Detalle técnico: ${detail.replace(/</g, '&lt;')}</div>` : ''}`;
+  $('bleHelp').classList.remove('hidden');
+  if ($('hsSub')) $('hsSub').innerHTML = `<span style="color:var(--amber)">${head} ${btOff ? 'Encendelo y probá de nuevo.' : 'Revisá el Bluetooth, cerrá Zepp y nRF Connect y probá de nuevo.'}</span> <button class="link" data-go="train" style="padding:0">Ver pasos</button>`;
 }
 function readyToStart() { $('btnStart').disabled = false; $('btnStart').textContent = 'Empezar sesión'; }
 
